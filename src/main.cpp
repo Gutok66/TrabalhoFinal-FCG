@@ -396,11 +396,11 @@ int main(int argc, char* argv[])
 
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
-        glm::vec3 character_right  = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
-        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
+        glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));  //GPT
+        glm::vec3 character_right  = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));  //GPT
+        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);    //GPT
 
-        glm::vec3 camera_lookat = character_position + character_forward * 5.0f + glm::vec3(0.0f, 1.0f, 0.0f); // levemente para cima
+        glm::vec3 camera_lookat = character_position + character_forward * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f); // levemente para cima
 
         glm::vec4 camera_position_c  = glm::vec4(camera_position,1.0f); // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l    = glm::vec4(camera_lookat,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
