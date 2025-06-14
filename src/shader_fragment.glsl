@@ -86,7 +86,16 @@ void main()
         vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
 
         U = (atan(position_model[0],position_model[2]) + M_PI)/(2*M_PI);
-        V = (asin(position_model[1]/length(position_model-bbox_center)) + M_PI/2)/(M_PI);;
+        V = (asin(position_model[1]/length(position_model-bbox_center)) + M_PI/2)/(M_PI);
+        // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
+    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+
+    vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;   //Carrega as luzes de noite
+
+    // Equação de Iluminação
+    float lambert = max(0,dot(n,l));
+
+    color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
     }
     else if ( object_id == BUNNY )
     {
@@ -110,15 +119,7 @@ void main()
 
         U = (position_model[0]-minx)/(maxx-minx);
         V = (position_model[1]-miny)/(maxy-miny);
-    }
-    else if ( object_id == PLANE )
-    {
-        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
-        U = texcoords.x;
-        V = texcoords.y;
-    }
-
-    // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
+        // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
 
     vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;   //Carrega as luzes de noite
@@ -127,6 +128,30 @@ void main()
     float lambert = max(0,dot(n,l));
 
     color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
+    }
+    else if ( object_id == PLANE )
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage2, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0 * (lambert + 0.01);
+    }
+
+    // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
+    //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+//
+    //vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;   //Carrega as luzes de noite
+//
+    //// Equação de Iluminação
+    //float lambert = max(0,dot(n,l));
+//
+    //color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
