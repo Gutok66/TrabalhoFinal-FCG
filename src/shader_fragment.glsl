@@ -22,6 +22,12 @@ uniform mat4 projection;
 #define SPHERE 0
 #define BUNNY  1
 #define PLANE  2
+#define ENEMY_HEAD 3
+#define ENEMY_FACE 4
+#define ENEMY_EYE 5
+#define ENEMY_MIDDLE 6
+#define ENEMY_BOTTOM 7
+#define PLANEE 8
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -32,6 +38,7 @@ uniform vec4 bbox_max;
 uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
+uniform sampler2D TextureImage3;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -67,6 +74,13 @@ void main()
     // Coordenadas de textura U e V
     float U = 0.0;
     float V = 0.0;
+
+    U = texcoords.x;
+    V = texcoords.y;
+    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0 * (lambert + 0.01);
 
     if ( object_id == SPHERE )
     {
@@ -142,6 +156,7 @@ void main()
 
         color.rgb = Kd0 * (lambert + 0.01);
     }
+    
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;

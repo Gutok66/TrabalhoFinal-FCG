@@ -314,6 +314,21 @@ int main(int argc, char* argv[])
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
+    ObjModel enemymodel("../../data/Soldier.obj");
+    ComputeNormals(&enemymodel);
+    BuildTrianglesAndAddToVirtualScene(&enemymodel);
+
+    std::map<std::string, GLuint> material_to_texture;
+/*  FONTE = COPILOT
+    for (size_t i = 0; i < enemymodel.materials.size(); ++i) {
+        std::string texname = enemymodel.materials[i].diffuse_texname;
+        if (!texname.empty()) {
+            std::string fullpath = std::string("../../data/") + texname;
+            LoadTextureImage(fullpath.c_str()); // This uses your existing loader
+            material_to_texture[enemymodel.materials[i].name] = g_NumLoadedTextures - 1; // Texture unit
+        }
+    } */
+
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
@@ -412,8 +427,16 @@ int main(int argc, char* argv[])
         #define SPHERE 0
         #define BUNNY  1
         #define PLANE  2
+        #define ENEMY_HEAD 3
+        #define ENEMY_FACE 4
+        #define ENEMY_EYE 5
+        #define ENEMY_MIDDLE 6
+        #define ENEMY_BOTTOM 7
+        #define PLANEE 8
 
         // Desenhamos o modelo da esfera
+
+
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
@@ -428,6 +451,28 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, BUNNY);
         DrawVirtualObject("the_bunny");
+
+        model = Matrix_Translate(0.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+
+
+
+        // Desenhamos o modelo do inimigo FONTE: COPILOT
+        for (size_t i = 0; i + 1 < enemymodel.shapes.size(); ++i) { // Skip last shape
+            const auto& shape = enemymodel.shapes[i];
+            /* int material_id = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[0];
+            std::string material_name = (material_id >= 0) ? enemymodel.materials[material_id].name : "";
+
+            // Bind the correct texture
+            if (!material_name.empty() && material_to_texture.count(material_name)) {
+                GLuint tex_unit = material_to_texture[material_name];
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, tex_unit);
+            } */
+
+            glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
+            DrawVirtualObject(shape.name.c_str());
+        }
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(10.0f, 1.0f, 10.0f);
@@ -601,6 +646,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
     glUseProgram(0);
 }
 
