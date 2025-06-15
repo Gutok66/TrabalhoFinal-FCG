@@ -203,6 +203,8 @@ float g_CameraSpeed = 1.0f; // Velocidade de movimento da câmera
 glm::mat4 character = Matrix_Identity(); // Personagem
 glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
+std::vector<glm::vec3> g_TreePositions;
+
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
 float g_ForearmAngleX = 0.0f;
@@ -322,6 +324,15 @@ int main(int argc, char* argv[])
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
+    ObjModel treemodel("../../data/GenTree_105_AE3D_03122023-F2.obj");
+    ComputeNormals(&treemodel);
+    BuildTrianglesAndAddToVirtualScene(&treemodel);
+
+    g_TreePositions.clear();
+    for (int i = 0; i < 20; i++) {
+        g_TreePositions.push_back(glm::vec3(((rand() % 200) - 100) / 5.0f, 0.0f, ((rand() % 200) - 100) / 5.0f));
+    }
+
     ObjModel enemymodel("../../data/Soldier.obj");
     ComputeNormals(&enemymodel);
     BuildTrianglesAndAddToVirtualScene(&enemymodel);
@@ -393,12 +404,11 @@ int main(int argc, char* argv[])
         float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
         float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
         float look_vertical = sin(g_CameraPhi);
-
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));  //GPT
         glm::vec3 character_right  = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));  //GPT
-        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);    //GPT
+        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
 
         glm::vec3 camera_lookat = character_position + character_forward * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f); // levemente para cima
 
@@ -462,7 +472,11 @@ int main(int argc, char* argv[])
         #define ENEMY_EYE 5
         #define ENEMY_MIDDLE 6
         #define ENEMY_BOTTOM 7
-        #define PLANEE 8
+        #define TREE_BRANCH 8
+        #define TREE_TRUNK 9
+        #define TREE_LEAVES 10
+        #define TREE_BRANCH2 11
+        #define TREE_BRANCH3 12
 
         // Desenhamos o modelo da esfera
 
@@ -482,6 +496,17 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, BUNNY);
         DrawVirtualObject("the_bunny");
 
+        for (const auto& tree_position : g_TreePositions) {
+            model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.5f, 0.5f, 0.5f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+
+            for (int j = 0; j < 5; j++) {
+                const auto& shape = treemodel.shapes[j];
+
+                glUniform1i(g_object_id_uniform, TREE_BRANCH + j);
+                DrawVirtualObject(shape.name.c_str());
+            }
+        }
         //character = Matrix_Translate(0.0f,1.0f,0.0f);
         model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -506,7 +531,7 @@ int main(int argc, char* argv[])
         }
 
         // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,0.0f,0.0f) * Matrix_Scale(10.0f, 1.0f, 10.0f);
+        model = Matrix_Translate(0.0f,0.0f,0.0f) * Matrix_Scale(20.0f, 1.0f, 20.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
