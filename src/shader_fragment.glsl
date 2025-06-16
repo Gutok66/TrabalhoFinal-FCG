@@ -19,15 +19,12 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // Identificador que define qual objeto está sendo desenhado no momento
-#define SPHERE 0
-#define BUNNY  1
-#define PLANE  2
-#define ENEMY_HEAD 3
-#define ENEMY_FACE 4
-#define ENEMY_EYE 5
-#define ENEMY_MIDDLE 6
-#define ENEMY_BOTTOM 7
-#define PLANEE 8
+#define PLANE  0
+#define ENEMY_HEAD 1
+#define ENEMY_FACE 2
+#define ENEMY_EYE 3
+#define ENEMY_MIDDLE 4
+#define ENEMY_BOTTOM 5
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -39,6 +36,9 @@ uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
 uniform sampler2D TextureImage3;
+uniform sampler2D TextureImage4;
+uniform sampler2D TextureImage5;
+uniform sampler2D TextureImage6;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -81,75 +81,54 @@ void main()
         float lambert = max(0,dot(n,l));
 
         color.rgb = Kd0 * (lambert + 0.01);
-
-    if ( object_id == SPHERE )
-    {
-        // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
-        // projeção esférica EM COORDENADAS DO MODELO. Utilize como referência
-        // o slides 134-150 do documento Aula_20_Mapeamento_de_Texturas.pdf.
-        // A esfera que define a projeção deve estar centrada na posição
-        // "bbox_center" definida abaixo.
-
-        // Você deve utilizar:
-        //   função 'length( )' : comprimento Euclidiano de um vetor
-        //   função 'atan( , )' : arcotangente. Veja https://en.wikipedia.org/wiki/Atan2.
-        //   função 'asin( )'   : seno inverso.
-        //   constante M_PI
-        //   variável position_model
-
-        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
-
-        U = (atan(position_model[0],position_model[2]) + M_PI)/(2*M_PI);
-        V = (asin(position_model[1]/length(position_model-bbox_center)) + M_PI/2)/(M_PI);
-        // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
-    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
-
-    vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;   //Carrega as luzes de noite
-
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
-
-    color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
-    }
-    else if ( object_id == BUNNY )
-    {
-        // PREENCHA AQUI as coordenadas de textura do coelho, computadas com
-        // projeção planar XY em COORDENADAS DO MODELO. Utilize como referência
-        // o slides 99-104 do documento Aula_20_Mapeamento_de_Texturas.pdf,
-        // e também use as variáveis min*/max* definidas abaixo para normalizar
-        // as coordenadas de textura U e V dentro do intervalo [0,1]. Para
-        // tanto, veja por exemplo o mapeamento da variável 'p_v' utilizando
-        // 'h' no slides 158-160 do documento Aula_20_Mapeamento_de_Texturas.pdf.
-        // Veja também a Questão 4 do Questionário 4 no Moodle.
-
-        float minx = bbox_min.x;
-        float maxx = bbox_max.x;
-
-        float miny = bbox_min.y;
-        float maxy = bbox_max.y;
-
-        float minz = bbox_min.z;
-        float maxz = bbox_max.z;
-
-        U = (position_model[0]-minx)/(maxx-minx);
-        V = (position_model[1]-miny)/(maxy-miny);
-        // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
-    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
-
-    vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;   //Carrega as luzes de noite
-
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
-
-    color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
-    }
-    else if ( object_id == PLANE )
+    
+    
+     if ( object_id == PLANE )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage2, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0 * (lambert + 0.01);
+    }
+    else if ( object_id == ENEMY_HEAD)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage3, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0 * (lambert + 0.01);
+    }
+    else if ( object_id == ENEMY_MIDDLE)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage4, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0 * (lambert + 0.01);
+    }
+    else if ( object_id == ENEMY_BOTTOM)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage5, vec2(U,V)).rgb;
 
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));

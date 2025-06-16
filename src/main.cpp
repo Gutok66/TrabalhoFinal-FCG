@@ -311,14 +311,11 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
     LoadTextureImage("../../data/rocky_terrain_02_diff_4k.jpg"); // TextureImage2
+    LoadTextureImage("../../data/textures/Type01/Head.png"); // TextureImage3
+    LoadTextureImage("../../data/textures/Type01/Body.png"); // TextureImage4
+    LoadTextureImage("../../data/textures/Type01/Lower.png"); // TextureImage5
+    LoadTextureImage("../../data/textures/Type01/Lower.png"); // TextureImage5
     // Construímos a representação de objetos geométricos através de malhas de triângulos
-    ObjModel spheremodel("../../data/sphere.obj");
-    ComputeNormals(&spheremodel);
-    BuildTrianglesAndAddToVirtualScene(&spheremodel);
-
-    ObjModel bunnymodel("../../data/bunny.obj");
-    ComputeNormals(&bunnymodel);
-    BuildTrianglesAndAddToVirtualScene(&bunnymodel);
 
     ObjModel planemodel("../../data/plane.obj");
     ComputeNormals(&planemodel);
@@ -432,7 +429,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -50.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -464,37 +461,18 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define SPHERE 0
-        #define BUNNY  1
-        #define PLANE  2
-        #define ENEMY_HEAD 3
-        #define ENEMY_FACE 4
-        #define ENEMY_EYE 5
-        #define ENEMY_MIDDLE 6
-        #define ENEMY_BOTTOM 7
-        #define TREE_BRANCH 8
-        #define TREE_TRUNK 9
-        #define TREE_LEAVES 10
-        #define TREE_BRANCH2 11
-        #define TREE_BRANCH3 12
+        #define PLANE 0
+        #define ENEMY_HEAD 1
+        #define ENEMY_FACE 2
+        #define ENEMY_EYE 3
+        #define ENEMY_MIDDLE 4
+        #define ENEMY_BOTTOM 5
+        #define TREE_BRANCH 6
+        #define TREE_TRUNK 7
+        #define TREE_LEAVES 8
+        #define TREE_BRANCH2 9
+        #define TREE_BRANCH3 10
 
-        // Desenhamos o modelo da esfera
-
-
-        model = Matrix_Translate(-1.0f,0.0f,0.0f)
-              * Matrix_Rotate_Z(0.6f)
-              * Matrix_Rotate_X(0.2f)
-              * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        DrawVirtualObject("the_sphere");
-
-        // Desenhamos o modelo do coelho
-        model = Matrix_Translate(1.0f,0.0f,0.0f)
-              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, BUNNY);
-        DrawVirtualObject("the_bunny");
 
         for (const auto& tree_position : g_TreePositions) {
             model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.5f, 0.5f, 0.5f);
@@ -703,6 +681,9 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage4"), 4);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage5"), 5);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage6"), 6);
     glUseProgram(0);
 }
 
@@ -1330,7 +1311,7 @@ void ErrorCallback(int error, const char* description)
 
 void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
-    float velocity = g_CameraSpeed * deltaTime;
+    float velocity = 5 * g_CameraSpeed * deltaTime;
 
     // Character's local axes
     // A direção "forward" do personagem vem do ângulo da câmera
