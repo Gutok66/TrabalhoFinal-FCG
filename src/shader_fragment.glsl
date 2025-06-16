@@ -19,12 +19,17 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // Identificador que define qual objeto está sendo desenhado no momento
-#define PLANE  0
+#define PLANE 0
 #define ENEMY_HEAD 1
 #define ENEMY_FACE 2
 #define ENEMY_EYE 3
 #define ENEMY_MIDDLE 4
 #define ENEMY_BOTTOM 5
+#define TREE_BRANCH 6
+#define TREE_TRUNK 7
+#define TREE_LEAVES 8
+#define TREE_BRANCH2 9
+#define TREE_BRANCH3 10
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -39,6 +44,7 @@ uniform sampler2D TextureImage3;
 uniform sampler2D TextureImage4;
 uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
+uniform sampler2D TextureImage7;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -80,7 +86,7 @@ void main()
     // default: cor preta
     color = vec4(0.0, 0.0, 0.0, 1.0); // Black with full alpha
     
-    
+    color.a = 1;
      if ( object_id == PLANE )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
@@ -92,7 +98,7 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.01);
+        color.rgb = Kd0 * (lambert + 0.1);
     }
     else if ( object_id == ENEMY_HEAD)
     {
@@ -105,7 +111,7 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.01);
+        color.rgb = Kd0 * (lambert + 0.1);
     }
     else if ( object_id == ENEMY_MIDDLE)
     {
@@ -118,7 +124,7 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.01);
+        color.rgb = Kd0 * (lambert + 0.1);
     }
     else if ( object_id == ENEMY_BOTTOM)
     {
@@ -131,7 +137,65 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.01);
+        color.rgb = Kd0 * (lambert + 0.1);
+    }
+    else if ( object_id == TREE_LEAVES)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec4 Kd0 = texture(TextureImage6, vec2(U,V));
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0.rgb * (lambert + 0.1);
+        color.a = 0;
+        //if (color.g < 1.0)
+            //discard;
+    }
+    else if ( object_id == TREE_BRANCH2)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec4 Kd0 = texture(TextureImage7, vec2(U,V));
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0.rgb * (lambert + 0.1);
+        color.a = Kd0.a;
+    }
+    else if ( object_id == TREE_TRUNK)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec4 Kd0 = texture(TextureImage7, vec2(U,V));
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0.rgb * (lambert + 0.1);
+        color.a = Kd0.a;
+    }
+    else if ( object_id == TREE_BRANCH3)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec4 Kd0 = texture(TextureImage7, vec2(U,V));
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0.rgb * (lambert + 0.1);
+        color.a = Kd0.a;
     }
     
 
@@ -143,7 +207,7 @@ void main()
     //// Equação de Iluminação
     //float lambert = max(0,dot(n,l));
 //
-    //color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
+    //color.rgb = Kd0 * (lambert + 0.1) + Kd1 * (1.0 - clamp(lambert*5.0, 0.0, 1.0));
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
@@ -157,7 +221,7 @@ void main()
     //    suas distâncias para a câmera (desenhando primeiro objetos
     //    transparentes que estão mais longe da câmera).
     // Alpha default = 1 = 100% opaco = 0% transparente
-    color.a = 1;
+    
 
     // Cor final com correção gamma, considerando monitor sRGB.
     // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas
