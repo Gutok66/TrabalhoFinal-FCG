@@ -167,6 +167,11 @@ struct SceneObject
 };
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
+// variáveis para gravidade e pulo
+float g_CharacterVerticalVelocity = 0.0f;
+bool g_IsCharacterGrounded = true;
+const float GRAVITY = -9.8f; // Earth gravity in m/s²
+const float JUMP_FORCE = 5.0f; // Adjust for desired jump height
 
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
@@ -1326,6 +1331,27 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
         character_position -= right * velocity;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         character_position += right * velocity;
+
+     // feito no deepseek   
+     // Pulo (somente quando grounded)
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
+    {
+        g_CharacterVerticalVelocity = JUMP_FORCE;
+        g_IsCharacterGrounded = false;
+    }
+    // Gravidade
+    g_CharacterVerticalVelocity += GRAVITY * deltaTime;
+    
+    // Update vertical position
+    character_position.y += g_CharacterVerticalVelocity * deltaTime;
+
+    // Simple ground collision (y = 0 is ground level)
+    if (character_position.y <= 0.0f)
+    {
+        character_position.y = 0.0f;
+        g_CharacterVerticalVelocity = 0.0f;
+        g_IsCharacterGrounded = true;
+    }   
 }
 
 // Esta função recebe um vértice com coordenadas de modelo p_model e passa o

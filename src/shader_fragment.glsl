@@ -77,10 +77,8 @@ void main()
 
     U = texcoords.x;
     V = texcoords.y;
-    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
-        float lambert = max(0,dot(n,l));
-
-        color.rgb = Kd0 * (lambert + 0.01);
+    // default: cor preta
+    color = vec4(0.0, 0.0, 0.0, 1.0); // Black with full alpha
     
     
      if ( object_id == PLANE )
