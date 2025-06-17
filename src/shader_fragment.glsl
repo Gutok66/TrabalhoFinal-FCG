@@ -30,6 +30,7 @@ uniform mat4 projection;
 #define TREE_LEAVES 8
 #define TREE_BRANCH2 9
 #define TREE_BRANCH3 10
+#define CROSSHAIR 11
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -92,6 +93,12 @@ void main()
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
         V = texcoords.y;
+
+        U = U * 5.0; // Repete 5 vezes na direção U
+        V = V * 5.0; // Repete 5 vezes na direção V
+
+        U = fract(U);
+        V = fract(V);
 
         vec3 Kd0 = texture(TextureImage2, vec2(U,V)).rgb;
 
@@ -197,7 +204,11 @@ void main()
         color.rgb = Kd0.rgb * (lambert + 0.1);
         color.a = Kd0.a;
     }
-    
+    else if ( object_id == CROSSHAIR)
+    {
+
+        color = vec4(1.0, 0.0, 0.0, 1.0); // Red with full alpha
+    }
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;

@@ -238,6 +238,7 @@ GLuint g_NumLoadedTextures = 0;
 
 float lastFrame = 0.0f;
 float deltaTime = 0.0f;
+int window_height = 600.0f;
 
 int main(int argc, char* argv[])
 {
@@ -372,6 +373,61 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+
+    // Escolher tamanho da crosshair
+    float crosshair_length_pixels = 30.0f;
+    float crosshair_thickness_pixels = 4.0f;
+
+    // Ajustar o tamanho da crosshair de acordo com a janela para manter mesmos pixels
+    float half_len = (crosshair_length_pixels / 2.0f) / (float)window_height;
+    float half_thick = (crosshair_thickness_pixels / 2.0f) / (float)window_height;
+    float half_len_x = half_len / g_ScreenRatio;        
+    float half_thick_x = half_thick / g_ScreenRatio;
+
+    float crosshair_vertices[] = {
+        // Barra horizontal (2 triângulos)
+        -half_len_x, -half_thick, 0.0f, 1.0f,
+
+        -half_len_x,  half_thick, 0.0f, 1.0f,
+
+        half_len_x,  half_thick, 0.0f, 1.0f,
+
+        -half_len_x, -half_thick, 0.0f, 1.0f,
+
+        half_len_x,  half_thick, 0.0f, 1.0f,
+
+        half_len_x, -half_thick, 0.0f, 1.0f,
+
+        // Barra vertical (2 triângulos)
+        -half_thick_x, -half_len, 0.0f, 1.0f,
+
+        -half_thick_x,  half_len, 0.0f, 1.0f,
+
+        half_thick_x,  half_len, 0.0f, 1.0f,
+
+        -half_thick_x, -half_len, 0.0f, 1.0f,
+
+        half_thick_x,  half_len, 0.0f, 1.0f,
+
+        half_thick_x, -half_len, 0.0f, 1.0f,
+    };
+
+    GLuint crosshairVAO, crosshairVBO;
+    glGenVertexArrays(1, &crosshairVAO);
+    glGenBuffers(1, &crosshairVBO);
+
+    glBindVertexArray(crosshairVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, crosshairVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(crosshair_vertices), crosshair_vertices, GL_STATIC_DRAW);
+
+    // Then enable all attributes
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -396,10 +452,10 @@ int main(int argc, char* argv[])
 
 
 
-        float camera_height = 1.7f;
-        float camera_distance = 1.0f;
-        float camera_side_offset = 0.5f; // Adjust this value for more/less side offset
-        float target_distance = 5.0f; // Distance to the target point (where the camera looks at)
+        float camera_height = 1.7f;     // Altura da câmera em relação ao chão
+        float camera_distance = 1.0f;   // Distância para trás do personagem
+        float camera_side_offset = 0.5f; // Distância lateral
+        float target_distance = 100.0f; // Distância até o ponto alvo (para onde a câmera está olhando)
 
         glm::vec3 character_pos = glm::vec3(character[3]);
         // Computamos a posição da câmera utilizando coordenadas esféricas.  As
@@ -482,6 +538,7 @@ int main(int argc, char* argv[])
         #define TREE_LEAVES 8
         #define TREE_BRANCH2 9
         #define TREE_BRANCH3 10
+        #define CROSSHAIR 11
 
 
         for (const auto& tree_position : g_TreePositions) {
@@ -523,6 +580,24 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
+
+        // Desenha a crosshair 2D no centro da tela
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        // Use uma matriz model identidade (sem transformações 3D)
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+        glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+        glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+        glUniform1i(g_object_id_uniform, CROSSHAIR);
+        // Desenha
+        glBindVertexArray(crosshairVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 12);
+        glBindVertexArray(0);
+
+        // Restaura estado
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
@@ -1084,7 +1159,7 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
     // coordinates" (NDC) para "pixel coordinates".  Essa é a operação de
     // "Screen Mapping" ou "Viewport Mapping" vista em aula ({+ViewportMapping2+}).
     glViewport(0, 0, width, height);
-
+    window_height = height;
     // Atualizamos também a razão que define a proporção da janela (largura /
     // altura), a qual será utilizada na definição das matrizes de projeção,
     // tal que não ocorra distorções durante o processo de "Screen Mapping"
@@ -1230,6 +1305,8 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     // definição do sistema de coordenadas da câmera. Isto é, a variável abaixo
     // nunca pode ser zero. Versões anteriores deste código possuíam este bug,
     // o qual foi detectado pelo aluno Vinicius Fraga (2017/2).
+    if (g_CameraDistance > 5.0f)
+        g_CameraDistance = 5.0f; // Limite máximo de distância da câmera para a origem.
     const float verysmallnumber = std::numeric_limits<float>::epsilon();
     if (g_CameraDistance < verysmallnumber)
         g_CameraDistance = verysmallnumber;
