@@ -232,7 +232,16 @@ void main()
     //    suas distâncias para a câmera (desenhando primeiro objetos
     //    transparentes que estão mais longe da câmera).
     // Alpha default = 1 = 100% opaco = 0% transparente
-    
+
+    //float dist = length(position_world - camera_position);
+    //float max_dist = 5.0;
+    //float min_dist = 3.0;
+
+    //float alpha = min(1.0, max(0, (dist-min_dist) / max_dist));
+    //vec3 cor_nevoa = vec3(1.0,1.0,1.0);
+    //color.rgb = mix(color.rgb, cor_nevoa, alpha);
+    //color.rgb = color.rgb + alpha*(cor_nevoa - color.rgb);
+    //color.rgb = color.rgb*(1-alpha) + vec3(alpha,alpha,alpha);
 
     // Cor final com correção gamma, considerando monitor sRGB.
     // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas
