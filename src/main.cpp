@@ -542,14 +542,17 @@ int main(int argc, char* argv[])
 
 
         for (const auto& tree_position : g_TreePositions) {
-            model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.5f, 0.5f, 0.5f);
-            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
+            if (dist < 5.0f) {
+                model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.5f, 0.5f, 0.5f);
+                glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
-            for (int j = 0; j < 5; j++) {
-                const auto& shape = treemodel.shapes[j];
+                for (int j = 0; j < 5; j++) {
+                    const auto& shape = treemodel.shapes[j];
 
-                glUniform1i(g_object_id_uniform, TREE_BRANCH + j);
-                DrawVirtualObject(shape.name.c_str());
+                    glUniform1i(g_object_id_uniform, TREE_BRANCH + j);
+                    DrawVirtualObject(shape.name.c_str());
+                }
             }
         }
         //character = Matrix_Translate(0.0f,1.0f,0.0f);
