@@ -233,13 +233,13 @@ void main()
     //    transparentes que estão mais longe da câmera).
     // Alpha default = 1 = 100% opaco = 0% transparente
 
-    //float dist = length(position_world - camera_position);
-    //float max_dist = 5.0;
-    //float min_dist = 3.0;
+    float dist = length(position_world - camera_position);
+    float max_dist = 5.0;
+    float min_dist = 3.0;
 
-    //float alpha = min(1.0, max(0, (dist-min_dist) / max_dist));
-    //vec3 cor_nevoa = vec3(1.0,1.0,1.0);
-    //color.rgb = mix(color.rgb, cor_nevoa, alpha);
+    float alpha = min(1.0, max(0, (dist-min_dist) / max_dist));
+    vec3 cor_nevoa = vec3(1.0,1.0,1.0);
+    color.rgb = mix(color.rgb, cor_nevoa, alpha);
     //color.rgb = color.rgb + alpha*(cor_nevoa - color.rgb);
     //color.rgb = color.rgb*(1-alpha) + vec3(alpha,alpha,alpha);
 
