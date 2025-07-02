@@ -218,6 +218,7 @@ float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
 float g_CameraDistance = 3.5f; // Distância da câmera para a origem
 float g_CameraSpeed = 1.0f; // Velocidade de movimento da câmera
 
+bool FirstPerson = false; // Variável que controla se a câmera está em primeira pessoa ou terceira pessoa
 glm::mat4 character = Matrix_Identity(); // Personagem
 glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -551,18 +552,22 @@ int main(int argc, char* argv[])
         glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));  //GPT
         glm::vec3 character_right  = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));  //GPT
         glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
-
+        if(FirstPerson){
+            camera_position = character_position + glm::vec3(0.0f, camera_height, 0.0f);
+        }
         glm::vec3 camera_lookat = character_position + character_forward * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f); // levemente para cima
 
         glm::vec4 camera_position_c  = glm::vec4(camera_position,1.0f); // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l    = glm::vec4(camera_lookat,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-
+        glm::vec4 g_CameraFront = glm::vec4(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta), 0.0f);
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
-
+        if(FirstPerson){
+            view = Matrix_Camera_View(camera_position_c, g_CameraFront, camera_up_vector);
+        }
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
@@ -637,22 +642,23 @@ int main(int argc, char* argv[])
 
 
         // Desenhamos o modelo do inimigo FONTE: COPILOT
-        for (size_t i = 0; i + 1 < enemymodel.shapes.size(); ++i) { // Skip last shape
-            const auto& shape = enemymodel.shapes[i];
-            /* int material_id = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[0];
-            std::string material_name = (material_id >= 0) ? enemymodel.materials[material_id].name : "";
+        if(!FirstPerson){
+            for (size_t i = 0; i + 1 < enemymodel.shapes.size(); ++i) { // Skip last shape
+                const auto& shape = enemymodel.shapes[i];
+                /* int material_id = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[0];
+                std::string material_name = (material_id >= 0) ? enemymodel.materials[material_id].name : "";
 
-            // Bind the correct texture
-            if (!material_name.empty() && material_to_texture.count(material_name)) {
-                GLuint tex_unit = material_to_texture[material_name];
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, tex_unit);
-            } */
+                // Bind the correct texture
+                if (!material_name.empty() && material_to_texture.count(material_name)) {
+                    GLuint tex_unit = material_to_texture[material_name];
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, tex_unit);
+                } */
 
-            glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
-            DrawVirtualObject(shape.name.c_str());
+                glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
+                DrawVirtualObject(shape.name.c_str());
+            }
         }
-
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,0.0f,0.0f) * Matrix_Scale(20.0f, 1.0f, 20.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -1423,7 +1429,7 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     // Atualizamos a distância da câmera para a origem utilizando a
     // movimentação da "rodinha", simulando um ZOOM.
     g_CameraDistance -= 0.1f*yoffset;
-
+    FirstPerson = false;
     // Uma câmera look-at nunca pode estar exatamente "em cima" do ponto para
     // onde ela está olhando, pois isto gera problemas de divisão por zero na
     // definição do sistema de coordenadas da câmera. Isto é, a variável abaixo
@@ -1432,8 +1438,10 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     if (g_CameraDistance > 5.0f)
         g_CameraDistance = 5.0f; // Limite máximo de distância da câmera para a origem.
     const float verysmallnumber = std::numeric_limits<float>::epsilon();
-    if (g_CameraDistance < verysmallnumber)
+    if (g_CameraDistance < verysmallnumber){
+        FirstPerson = true; // Se a distância for muito pequena, utilizamos a câmera em primeira pessoa.
         g_CameraDistance = verysmallnumber;
+    }
 }
 
 // Definição da função que será chamada sempre que o usuário pressionar alguma
