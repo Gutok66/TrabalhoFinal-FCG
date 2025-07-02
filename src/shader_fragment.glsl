@@ -18,6 +18,9 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+// variavel para projetil
+uniform float projectile_alpha;
+
 // Identificador que define qual objeto está sendo desenhado no momento
 #define PLANE 0
 #define ENEMY_HEAD 1
@@ -31,6 +34,7 @@ uniform mat4 projection;
 #define TREE_BRANCH2 9
 #define TREE_BRANCH3 10
 #define CROSSHAIR 11
+#define PROJECTILE_LINE 12
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -209,6 +213,10 @@ void main()
 
         color = vec4(1.0, 0.0, 0.0, 1.0); // Red with full alpha
     }
+    else if ( object_id == PROJECTILE_LINE)
+    {
+        color = vec4(1.0, 1.0, 0.0, projectile_alpha); // Yellow with fading alpha
+    }
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
@@ -234,10 +242,10 @@ void main()
     // Alpha default = 1 = 100% opaco = 0% transparente
 
     float dist = length(position_world - camera_position);
-    float max_dist = 5.0;
-    float min_dist = 3.0;
+    float max_dist = 25.0;  
+    float min_dist = 3.0;  
 
-    float alpha = min(1.0, max(0, (dist-min_dist) / max_dist));
+    float alpha = min(1.0, max(0, (dist-min_dist) / max_dist)); 
     vec3 cor_nevoa = vec3(1.0,1.0,1.0);
     color.rgb = mix(color.rgb, cor_nevoa, alpha);
     //color.rgb = color.rgb + alpha*(cor_nevoa - color.rgb);

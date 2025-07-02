@@ -166,6 +166,19 @@ struct SceneObject
     glm::vec3    bbox_max;
 };
 
+// Estrutura com dados para tiro (projectile)
+// Add these variables after the other global variables (around line 200):
+struct Projectile {
+    glm::vec3 start_position;
+    glm::vec3 end_position;
+    bool active;
+    float creation_time;
+};
+
+std::vector<Projectile> g_Projectiles;
+const float PROJECTILE_LIFETIME = 1.0f; // seconds
+const float PROJECTILE_MAX_DISTANCE = 100.0f;
+
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 // variáveis para gravidade e pulo
 float g_CharacterVerticalVelocity = 0.0f;
@@ -232,6 +245,8 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
+// para projetil
+GLint g_projectile_alpha_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -239,6 +254,59 @@ GLuint g_NumLoadedTextures = 0;
 float lastFrame = 0.0f;
 float deltaTime = 0.0f;
 int window_height = 600.0f;
+
+#define PLANE 0
+#define ENEMY_HEAD 1
+#define ENEMY_FACE 2
+#define ENEMY_EYE 3
+#define ENEMY_MIDDLE 4
+#define ENEMY_BOTTOM 5
+#define TREE_BRANCH 6
+#define TREE_TRUNK 7
+#define TREE_LEAVES 8
+#define TREE_BRANCH2 9
+#define TREE_BRANCH3 10
+#define CROSSHAIR 11
+#define PROJECTILE_LINE 12
+
+// Simple ray-sphere intersection for trees
+bool RayIntersectsSphere(glm::vec3 ray_origin, glm::vec3 ray_direction, glm::vec3 sphere_center, float sphere_radius, float& hit_distance) {
+    glm::vec3 oc = ray_origin - sphere_center;
+    float a = dot(ray_direction, ray_direction);
+    float b = 2.0f * dot(oc, ray_direction);
+    float c = dot(oc, oc) - sphere_radius * sphere_radius;
+    float discriminant = b * b - 4 * a * c;
+    
+    if (discriminant < 0) {
+        return false;
+    }
+    
+    float t1 = (-b - sqrt(discriminant)) / (2.0f * a);
+    float t2 = (-b + sqrt(discriminant)) / (2.0f * a);
+    
+    if (t1 > 0) {
+        hit_distance = t1;
+        return true;
+    } else if (t2 > 0) {
+        hit_distance = t2;
+        return true;
+    }
+    
+    return false;
+}
+
+// Ray-plane intersection for ground
+bool RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction, float& hit_distance) {
+    // Ground is at y = 0
+    if (abs(ray_direction.y) < 0.001f) return false; // Ray is parallel to ground
+    
+    float t = -ray_origin.y / ray_direction.y;
+    if (t > 0) {
+        hit_distance = t;
+        return true;
+    }
+    return false;
+}
 
 int main(int argc, char* argv[])
 {
@@ -276,6 +344,11 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: glfwCreateWindow() failed.\n");
         std::exit(EXIT_FAILURE);
     }
+    
+    // Hide and capture the mouse cursor for FPS-style camera control
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+
     glfwSwapInterval(0); // Desabilita VSync, para que o programa rode a 60 FPS ou mais
     // Definimos a função de callback que será chamada sempre que o usuário
     // pressionar alguma tecla do teclado ...
@@ -528,23 +601,24 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define PLANE 0
-        #define ENEMY_HEAD 1
-        #define ENEMY_FACE 2
-        #define ENEMY_EYE 3
-        #define ENEMY_MIDDLE 4
-        #define ENEMY_BOTTOM 5
-        #define TREE_BRANCH 6
-        #define TREE_TRUNK 7
-        #define TREE_LEAVES 8
-        #define TREE_BRANCH2 9
-        #define TREE_BRANCH3 10
-        #define CROSSHAIR 11
+       // #define PLANE 0
+       // #define ENEMY_HEAD 1
+       // #define ENEMY_FACE 2
+       // #define ENEMY_EYE 3
+       // #define ENEMY_MIDDLE 4
+       // #define ENEMY_BOTTOM 5
+       // #define TREE_BRANCH 6
+       // #define TREE_TRUNK 7
+       // #define TREE_LEAVES 8
+       // #define TREE_BRANCH2 9
+       // #define TREE_BRANCH3 10
+       // #define CROSSHAIR 11
+       // #define PROJECTILE_LINE 12
 
 
         for (const auto& tree_position : g_TreePositions) {
             auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
-            if (dist < 5.0f) {
+            if (dist < 25.0f) {  // deixar esse valor igual ou similar ao max_dist
                 model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.5f, 0.5f, 0.5f);
                 glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
@@ -584,6 +658,69 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
+
+        // Update and render projectiles
+        float current_time = (float)glfwGetTime();
+        for (auto it = g_Projectiles.begin(); it != g_Projectiles.end();) {
+            if (current_time - it->creation_time > PROJECTILE_LIFETIME) {
+                it = g_Projectiles.erase(it);
+            } else {
+                // Calculate fade alpha based on age
+                float age = current_time - it->creation_time;
+                float fade_alpha = 1.0f - (age / PROJECTILE_LIFETIME); // Fade from 1.0 to 0.0
+                
+                // Render projectile as a thick line
+                glDisable(GL_DEPTH_TEST);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                
+                // Set line width to make it thicker
+                glLineWidth(5.0f);
+                
+                // Create line vertices
+                float line_vertices[] = {
+                    it->start_position.x, it->start_position.y, it->start_position.z, 1.0f,
+                    it->end_position.x, it->end_position.y, it->end_position.z, 1.0f
+                };
+                
+                GLuint lineVAO, lineVBO;
+                glGenVertexArrays(1, &lineVAO);
+                glGenBuffers(1, &lineVBO);
+                
+                glBindVertexArray(lineVAO);
+                glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+                
+                glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+                
+                // Set uniforms
+                glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+                glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+                glUniform1i(g_object_id_uniform, PROJECTILE_LINE);
+                
+                // Pass fade alpha to shader
+                glUniform1f(g_projectile_alpha_uniform, fade_alpha);
+                
+                // Draw line
+                glDrawArrays(GL_LINES, 0, 2);
+                
+                // Cleanup
+                glDeleteBuffers(1, &lineVBO);
+                glDeleteVertexArrays(1, &lineVAO);
+                glLineWidth(1.0f); // Reset line width
+                
+                glDisable(GL_BLEND);
+                glEnable(GL_DEPTH_TEST);
+                
+                ++it;
+            }
+        }
+
+        // Desenha a crosshair 2D no centro da tela
+        glDisable(GL_DEPTH_TEST);
+        
 
         // Desenha a crosshair 2D no centro da tela
         glDisable(GL_DEPTH_TEST);
@@ -763,6 +900,7 @@ void LoadShadersFromFiles()
     g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
+    g_projectile_alpha_uniform = glGetUniformLocation(g_GpuProgramID, "projectile_alpha");
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
@@ -1232,68 +1370,50 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-// Função callback chamada sempre que o usuário movimentar o cursor do mouse em
-// cima da janela OpenGL.
+// Replace the CursorPosCallback function with this updated version:
+
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    // Abaixo executamos o seguinte: caso o botão esquerdo do mouse esteja
-    // pressionado, computamos quanto que o mouse se movimento desde o último
-    // instante de tempo, e usamos esta movimentação para atualizar os
-    // parâmetros que definem a posição da câmera dentro da cena virtual.
-    // Assim, temos que o usuário consegue controlar a câmera.
-
-    if (g_LeftMouseButtonPressed)
+    // Calculate mouse movement since last frame
+    static bool first_mouse = true;
+    if (first_mouse)
     {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da câmera com os deslocamentos
-        g_CameraTheta -= 0.01f*dx;
-        g_CameraPhi   += 0.01f*dy;
-    //
-        // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
-        float phimax = glm::radians(89.0f);
-        float phimin = glm::radians(-89.0f);
-        g_CameraPhi = glm::clamp(g_CameraPhi, phimin, phimax);
-    
-
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
         g_LastCursorPosY = ypos;
+        first_mouse = false;
     }
 
+    // Always update camera based on mouse movement (remove the button press condition)
+    float dx = xpos - g_LastCursorPosX;
+    float dy = ypos - g_LastCursorPosY;
+
+    // Update camera parameters with mouse movement
+    g_CameraTheta -= 0.01f*dx;
+    g_CameraPhi   += 0.01f*dy;
+
+    // Clamp phi angle to prevent camera flipping
+    float phimax = glm::radians(89.0f);
+    float phimin = glm::radians(-89.0f);
+    g_CameraPhi = glm::clamp(g_CameraPhi, phimin, phimax);
+
+    // Update last cursor position
+    g_LastCursorPosX = xpos;
+    g_LastCursorPosY = ypos;
+
+    // Keep the right mouse button functionality for forearm control
     if (g_RightMouseButtonPressed)
     {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da antebraço com os deslocamentos
+        // Forearm angle control with right mouse button
         g_ForearmAngleZ -= 0.01f*dx;
         g_ForearmAngleX += 0.01f*dy;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
     }
 
+    // Keep the middle mouse button functionality for torso control
     if (g_MiddleMouseButtonPressed)
     {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da antebraço com os deslocamentos
+        // Torso position control with middle mouse button
         g_TorsoPositionX += 0.01f*dx;
         g_TorsoPositionY -= 0.01f*dy;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
     }
 }
 
@@ -1392,6 +1512,71 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         LoadShadersFromFiles();
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
+    }
+
+    // Apertar F para atirar
+    if (key == GLFW_KEY_F && action == GLFW_PRESS)
+    {
+        // Calculate camera direction (same as crosshair direction)
+        glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
+        glm::vec3 character_right = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
+        
+        // Camera position (same calculation as in main loop)
+        float camera_height = 1.7f;
+        float camera_side_offset = 0.5f;
+        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
+        
+        // Camera look direction (same calculation as in main loop)
+        float target_distance = 100.0f;
+        float look_vertical = sin(g_CameraPhi);
+        glm::vec3 camera_lookat = character_position + character_forward * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f);
+        
+        // Calculate actual camera view direction
+        glm::vec3 projectile_direction = normalize(camera_lookat - camera_position);
+        
+        // Adjust projectile start position to align with crosshair
+        float projectile_start_distance = 1.5f; // Distance in front of character
+        float right_offset = 0.3f; // Move projectile to the right
+        float up_offset = 0.2f; // Move projectile up
+        
+        glm::vec3 projectile_start = character_position + 
+                                   glm::vec3(0.0f, 1.0f + up_offset, 0.0f) + // Base height + up adjustment
+                                   projectile_direction * projectile_start_distance + // Forward distance
+                                   character_right * right_offset; // Right adjustment
+        
+        // Perform raycasting to find hit point
+        float closest_hit_distance = PROJECTILE_MAX_DISTANCE;
+        bool hit_something = false;
+        
+        // Check collision with ground
+        float ground_hit_distance;
+        if (RayIntersectsGround(projectile_start, projectile_direction, ground_hit_distance)) {
+            if (ground_hit_distance < closest_hit_distance) {
+                closest_hit_distance = ground_hit_distance;
+                hit_something = true;
+            }
+        }
+        
+        // Check collision with trees
+        for (const auto& tree_position : g_TreePositions) {
+            float tree_hit_distance;
+            float tree_radius = 2.0f;
+            if (RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {
+                if (tree_hit_distance < closest_hit_distance) {
+                    closest_hit_distance = tree_hit_distance;
+                    hit_something = true;
+                }
+            }
+        }
+
+        // Create projectile
+        Projectile new_projectile;
+        new_projectile.start_position = projectile_start;
+        new_projectile.end_position = projectile_start + projectile_direction * closest_hit_distance;
+        new_projectile.active = true;
+        new_projectile.creation_time = (float)glfwGetTime();
+        
+        g_Projectiles.push_back(new_projectile);
     }
 }
 
