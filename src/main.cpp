@@ -554,7 +554,7 @@ int main(int argc, char* argv[])
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::vec4 g_CameraFront = glm::vec4(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta), 0.0f);
         glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));  //GPT
-        glm::vec3 character_front = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));  //GPT
+        glm::vec3 character_front = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));
         glm::vec3 character_right  = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));  //GPT
         glm::vec3 camera_position = character_position - character_front * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
         if(FirstPerson){
@@ -1539,18 +1539,17 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         if (Ammo > 0){
         // Calculate camera direction (same as crosshair direction)
-        glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
+        glm::vec3 character_front = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));
         glm::vec3 character_right = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
         
         // Camera position (same calculation as in main loop)
         float camera_height = 1.7f;
         float camera_side_offset = 0.5f;
-        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
-        
+        glm::vec3 camera_position = character_position - character_front * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
         // Camera look direction (same calculation as in main loop)
         float target_distance = 100.0f;
         float look_vertical = sin(g_CameraPhi);
-        glm::vec3 camera_lookat = character_position + character_forward * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f);
+        glm::vec3 camera_lookat = character_position + character_front * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f);
         
         // Calculate actual camera view direction
         glm::vec3 projectile_direction = normalize(camera_lookat - camera_position);
@@ -1560,10 +1559,8 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         float right_offset = 0.3f; // Move projectile to the right
         float up_offset = 0.2f; // Move projectile up
         
-        glm::vec3 projectile_start = character_position + 
-                                   glm::vec3(0.0f, 1.0f + up_offset, 0.0f) + // Base height + up adjustment
-                                   projectile_direction * projectile_start_distance + // Forward distance
-                                   character_right * right_offset; // Right adjustment
+        glm::vec3 projectile_start = camera_position + projectile_direction * projectile_start_distance; // Forward distance
+
         
         // Perform raycasting to find hit point
         float closest_hit_distance = PROJECTILE_MAX_DISTANCE;
