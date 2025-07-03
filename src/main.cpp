@@ -142,6 +142,8 @@ void TextRendering_ShowModelViewProjection(GLFWwindow* window, glm::mat4 project
 void TextRendering_ShowEulerAngles(GLFWwindow* window);
 void TextRendering_ShowProjection(GLFWwindow* window);
 void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
+void TextRendering_ShowAmmo(GLFWwindow* window);
+void TextRendering_ShowReload(GLFWwindow* window);
 
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
@@ -223,7 +225,7 @@ glm::mat4 character = Matrix_Identity(); // Personagem
 glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
 std::vector<glm::vec3> g_TreePositions;
-
+int Ammo = 30; // Total de munição disponível
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
 float g_ForearmAngleX = 0.0f;
@@ -402,10 +404,6 @@ int main(int argc, char* argv[])
     ObjModel planemodel("../../data/plane.obj");
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
-
-    ObjModel treemodel("../../data/trees9.obj");
-    ComputeNormals(&treemodel);
-    BuildTrianglesAndAddToVirtualScene(&treemodel);
 
     ObjModel barricade("../../data/10551_ConcreteConstructionBarricade_v1-L3.obj");
     ComputeNormals(&barricade);
@@ -755,9 +753,12 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
 
+        TextRendering_ShowAmmo(window);
+
+        TextRendering_ShowReload(window);
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
-        TextRendering_ShowEulerAngles(window);
+        //TextRendering_ShowEulerAngles(window);
 
         // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
         TextRendering_ShowProjection(window);
@@ -1527,6 +1528,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
     {
+        Ammo = 30; // Recarrega munição
         LoadShadersFromFiles();
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
@@ -1535,6 +1537,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Apertar F para atirar
     if (key == GLFW_KEY_F && action == GLFW_PRESS)
     {
+        if (Ammo > 0){
         // Calculate camera direction (same as crosshair direction)
         glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
         glm::vec3 character_right = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
@@ -1595,6 +1598,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         new_projectile.creation_time = (float)glfwGetTime();
         
         g_Projectiles.push_back(new_projectile);
+        Ammo--; // Decrementa munição
+        }
+        else {
+            
+        }
     }
 }
 
@@ -1770,6 +1778,34 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
     float charwidth = TextRendering_CharWidth(window);
 
     TextRendering_PrintString(window, buffer, 1.0f-(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
+}
+
+void TextRendering_ShowAmmo(GLFWwindow* window)
+{
+    if ( !g_ShowInfoText )
+        return;
+
+    static char  buffer[20] = "Ammo: ??";
+    static int   numchars = 2;
+
+    numchars = snprintf(buffer, 20, "Ammo: %d", Ammo);
+
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+
+    TextRendering_PrintString(window, buffer, 1.0f-20*charwidth, -1.0f+3*lineheight, 2.0f);
+}
+
+void TextRendering_ShowReload(GLFWwindow* window)
+{
+    if ( !g_ShowInfoText )
+        return;
+
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+
+    if ( Ammo == 0 )
+        TextRendering_PrintString(window, "Press R to reload", 0.0f-12*charwidth, 0.0f+2*lineheight, 1.5f);
 }
 
 // Função para debugging: imprime no terminal todas informações de um modelo
