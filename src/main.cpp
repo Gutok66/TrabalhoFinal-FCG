@@ -215,7 +215,7 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // renderização.
 float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 3.5f; // Distância da câmera para a origem
+float g_CameraDistance = 1.4f; // Distância da câmera para a origem
 float g_CameraSpeed = 1.0f; // Velocidade de movimento da câmera
 
 bool FirstPerson = false; // Variável que controla se a câmera está em primeira pessoa ou terceira pessoa
@@ -262,8 +262,8 @@ int window_height = 600.0f;
 #define ENEMY_EYE 3
 #define ENEMY_MIDDLE 4
 #define ENEMY_BOTTOM 5
-#define TREE_BRANCH 6
-#define TREE_TRUNK 7
+#define TREE 6
+#define BARRICADE 7
 #define TREE_LEAVES 8
 #define TREE_BRANCH2 9
 #define TREE_BRANCH3 10
@@ -396,15 +396,20 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/textures/Type01/Lower.png"); // TextureImage5
     LoadTextureImage("../../data/textures/Maple_AE3D_03272021-A2-50pc.png"); // TextureImage6
     LoadTextureImage("../../data/textures/GenTree_1_Trunk_Limbs_AE3D_03312023-A-DIFFUSE.png"); // TextureImage7
+    LoadTextureImage("../../data/concreteconstructionbBarricade.jpg"); // TextureImage8
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
     ObjModel planemodel("../../data/plane.obj");
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
-    ObjModel treemodel("../../data/GenTree_105_AE3D_03122023-F2.obj");
+    ObjModel treemodel("../../data/trees9.obj");
     ComputeNormals(&treemodel);
     BuildTrianglesAndAddToVirtualScene(&treemodel);
+
+    ObjModel barricade("../../data/10551_ConcreteConstructionBarricade_v1-L3.obj");
+    ComputeNormals(&barricade);
+    BuildTrianglesAndAddToVirtualScene(&barricade);
 
     g_TreePositions.clear();
     for (int i = 0; i < 20; i++) {
@@ -549,19 +554,20 @@ int main(int argc, char* argv[])
 
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
+        glm::vec4 g_CameraFront = glm::vec4(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta), 0.0f);
         glm::vec3 character_forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));  //GPT
+        glm::vec3 character_front = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));  //GPT
         glm::vec3 character_right  = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));  //GPT
-        glm::vec3 camera_position = character_position - character_forward * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
+        glm::vec3 camera_position = character_position - character_front * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
         if(FirstPerson){
             camera_position = character_position + glm::vec3(0.0f, camera_height, 0.0f);
         }
-        glm::vec3 camera_lookat = character_position + character_forward * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f); // levemente para cima
+        glm::vec3 camera_lookat = character_position + character_front * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f); // levemente para cima
 
         glm::vec4 camera_position_c  = glm::vec4(camera_position,1.0f); // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l    = glm::vec4(camera_lookat,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-        glm::vec4 g_CameraFront = glm::vec4(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta), 0.0f);
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -624,15 +630,18 @@ int main(int argc, char* argv[])
         for (const auto& tree_position : g_TreePositions) {
             auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
             if (dist < 25.0f) {  // deixar esse valor igual ou similar ao max_dist
-                model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.5f, 0.5f, 0.5f);
+                model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.015f, 0.015f, 0.015f)*Matrix_Rotate_X(-3.141592f/2.0f);
                 glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
-                for (int j = 0; j < 5; j++) {
+                /*for (int j = 0; j < 5; j++) {
                     const auto& shape = treemodel.shapes[j];
 
                     glUniform1i(g_object_id_uniform, TREE_BRANCH + j);
                     DrawVirtualObject(shape.name.c_str());
-                }
+                }*/
+                //const auto& shape = barricade.shapes[0];
+                glUniform1i(g_object_id_uniform, BARRICADE);
+                DrawVirtualObject("ConcreteConstructionBarrier");
             }
         }
         //character = Matrix_Translate(0.0f,1.0f,0.0f);
@@ -918,6 +927,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage5"), 5);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage6"), 6);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage7"), 7);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage8"), 8);
     glUseProgram(0);
 }
 
@@ -1398,8 +1408,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     g_CameraPhi   += 0.01f*dy;
 
     // Clamp phi angle to prevent camera flipping
-    float phimax = glm::radians(89.0f);
-    float phimin = glm::radians(-89.0f);
+    float phimax = glm::radians(85.0f);
+    float phimin = glm::radians(-85.0f);
     g_CameraPhi = glm::clamp(g_CameraPhi, phimin, phimax);
 
     // Update last cursor position
@@ -1435,8 +1445,8 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     // definição do sistema de coordenadas da câmera. Isto é, a variável abaixo
     // nunca pode ser zero. Versões anteriores deste código possuíam este bug,
     // o qual foi detectado pelo aluno Vinicius Fraga (2017/2).
-    if (g_CameraDistance > 5.0f)
-        g_CameraDistance = 5.0f; // Limite máximo de distância da câmera para a origem.
+    if (g_CameraDistance > 1.5f)
+        g_CameraDistance = 1.5f; // Limite máximo de distância da câmera para a origem.
     const float verysmallnumber = std::numeric_limits<float>::epsilon();
     if (g_CameraDistance < verysmallnumber){
         FirstPerson = true; // Se a distância for muito pequena, utilizamos a câmera em primeira pessoa.

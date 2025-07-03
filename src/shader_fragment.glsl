@@ -28,13 +28,14 @@ uniform float projectile_alpha;
 #define ENEMY_EYE 3
 #define ENEMY_MIDDLE 4
 #define ENEMY_BOTTOM 5
-#define TREE_BRANCH 6
-#define TREE_TRUNK 7
+#define TREE 6
+#define BARRICADE 7
 #define TREE_LEAVES 8
 #define TREE_BRANCH2 9
 #define TREE_BRANCH3 10
 #define CROSSHAIR 11
 #define PROJECTILE_LINE 12
+#define TREE_WALL 13
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -50,6 +51,8 @@ uniform sampler2D TextureImage4;
 uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
 uniform sampler2D TextureImage7;
+uniform sampler2D TextureImage8;
+
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -180,7 +183,7 @@ void main()
         color.rgb = Kd0.rgb * (lambert + 0.1);
         color.a = Kd0.a;
     }
-    else if ( object_id == TREE_TRUNK)
+    else if ( object_id == 8)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -217,7 +220,19 @@ void main()
     {
         color = vec4(1.0, 1.0, 0.0, projectile_alpha); // Yellow with fading alpha
     }
+    else if ( object_id == BARRICADE)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
 
+        vec3 Kd0 = texture(TextureImage8, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        color.rgb = Kd0 * (lambert + 0.1);
+    }
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
 //
