@@ -386,7 +386,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage14, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.3, 0.3, 0.3); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -401,7 +401,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage15, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.3, 0.3, 0.3); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -416,7 +416,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage16, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.3, 0.3, 0.3); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -430,7 +430,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage17, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.3, 0.3, 0.3); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -445,7 +445,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage18, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.2, 0.2, 0.2); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -460,7 +460,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage19, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.3, 0.3, 0.3); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -475,7 +475,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage20, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.1, 0.1, 0.1); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
@@ -490,7 +490,7 @@ void main()
         V = texcoords.y;
 
         vec3 Kd0 = texture(TextureImage21, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        vec3 Ks0 = vec3(0.1, 0.1, 0.1); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular

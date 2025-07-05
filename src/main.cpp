@@ -657,78 +657,91 @@ int main(int argc, char* argv[])
                 }
         }
         
-        model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
+        model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
-        for (size_t j = 0; j < player.shapes.size(); ++j) {
-            switch(j){
-                case 0:
-                    glUniform1i(g_object_id_uniform, material);
-                    break;
-                case 1:
-                    glUniform1i(g_object_id_uniform, pol_filter);
-                    break;
-                case 2:
-                    glUniform1i(g_object_id_uniform, pol_gas_mask);
-                    break;
-                case 3:
-                    glUniform1i(g_object_id_uniform, glass);
-                    break;
-                case 4:
-                    glUniform1i(g_object_id_uniform, pol_helmet);
-                    break;
-                case 5:
-                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
-                    break;
-                case 6:
-                    glUniform1i(g_object_id_uniform, boot_war1);
-                    break;
-                case 7:
-                    glUniform1i(g_object_id_uniform, magb);
-                    break;
-                case 8:
-                    glUniform1i(g_object_id_uniform, magb);
-                    break;
-                case 9:
-                    glUniform1i(g_object_id_uniform, magb);
-                    break;
-                case 10:
-                    glUniform1i(g_object_id_uniform, pol_bproof);
-                    break;
-                case 11:
-                    glUniform1i(g_object_id_uniform, pol_hand);
-                    break;
-                case 12:
-                    glUniform1i(g_object_id_uniform, pol_head);
-                    break;
-                case 13:
-                    glUniform1i(g_object_id_uniform, pol_jaket);
-                    break;
-                case 14:
-                    glUniform1i(g_object_id_uniform, pol_pants);
-                    break;
-                case 15:
-                    glUniform1i(g_object_id_uniform, RGZ89);
-                    break;
-                case 16:
-                    glUniform1i(g_object_id_uniform, RGZ89);
-                    break;
-                case 17:
-                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
-                    break;
-                case 18:
-                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
-                    break;
-                case 19:
-                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
-                    break;
-                default:
-                    break;
+        if (!FirstPerson){
+            for (size_t j = 0; j < player.shapes.size(); ++j) {
+                switch(j){
+                    case 0:
+                        glUniform1i(g_object_id_uniform, material);
+                        break;
+                    case 1:
+                        glUniform1i(g_object_id_uniform, pol_filter);
+                        break;
+                    case 2:
+                        glUniform1i(g_object_id_uniform, pol_gas_mask);
+                        break;
+                    case 3:
+                        glUniform1i(g_object_id_uniform, glass);
+                        break;
+                    case 4:
+                        glUniform1i(g_object_id_uniform, pol_helmet);
+                        break;
+                    case 5:
+                        glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                        break;
+                    case 6:
+                        glUniform1i(g_object_id_uniform, boot_war1);
+                        break;
+                    case 7:
+                        glUniform1i(g_object_id_uniform, magb);
+                        break;
+                    case 8:
+                        glUniform1i(g_object_id_uniform, magb);
+                        break;
+                    case 9:
+                        glUniform1i(g_object_id_uniform, magb);
+                        break;
+                    case 10:
+                        glUniform1i(g_object_id_uniform, pol_bproof);
+                        break;
+                    case 11:
+                        glUniform1i(g_object_id_uniform, pol_hand);
+                        break;
+                    case 12:
+                        glUniform1i(g_object_id_uniform, pol_head);
+                        break;
+                    case 13:
+                        glUniform1i(g_object_id_uniform, pol_jaket);
+                        break;
+                    case 14:
+                        glUniform1i(g_object_id_uniform, pol_pants);
+                        break;
+                    case 15:
+                        glUniform1i(g_object_id_uniform, RGZ89);
+                        break;
+                    case 16:
+                        glUniform1i(g_object_id_uniform, RGZ89);
+                        break;
+                    case 17:
+                        glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                        break;
+                    case 18:
+                        glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                        break;
+                    case 19:
+                        glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                        break;
+                    default:
+                        break;
+                }
+                DrawVirtualObject(player.shapes[j].name.c_str());
             }
-            DrawVirtualObject(player.shapes[j].name.c_str());
+        }
+        else{
+            model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta) * Matrix_Translate(0.0f, camera_height, 0.0f) * Matrix_Rotate_X(g_CameraPhi) * Matrix_Translate(0.0f, -camera_height, 0.0f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            // Renderizar o personagem em primeira pessoa
+            glUniform1i(g_object_id_uniform, pol_hand);
+            DrawVirtualObject("pol_hand_0");
+            glUniform1i(g_object_id_uniform, WZ96_Beryl);
+            DrawVirtualObject("WZ96_Beryl_0");
+            glUniform1i(g_object_id_uniform, pol_jaket);
+            DrawVirtualObject("pol_jaket_0");
         }
 
-        model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+        model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
         // Desenhamos o modelo do inimigo FONTE: COPILOT
@@ -1660,6 +1673,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         if (Ammo > 0)
         {
+
             // Call the correct function from our Physics system.
             // This will add the projectile to the correct list (Physics::Projectiles).
             Physics::HandleShooting(
@@ -1669,6 +1683,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
                 g_CameraDistance,
                 FirstPerson
             );
+            character_position = character_position - glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta))*0.1f; //Recoil
             Ammo--; // Decrementa munição
         }
     }
