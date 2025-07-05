@@ -97,9 +97,9 @@ void main()
     V = texcoords.y;
     // default: cor preta
     color = vec4(1.0, 0.0, 0.0, 1.0); // Black with full alpha
-    vec4 ambient = vec4(0.0, 0.0, 0.0, 1.0); // Cor ambiente
+    vec4 ambient = vec4(0.0, 0.0, 0.0, 0.0); // Cor ambiente
     vec4 diffuse = vec4(0.0, 0.0, 0.0, 1.0); // Cor difusa
-    vec4 specular = vec4(0.0, 0.0, 0.0, 1.0); // Cor especular
+    vec4 specular = vec4(0.0, 0.0, 0.0, 0.0); // Cor especular
      if ( object_id == PLANE )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
