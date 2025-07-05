@@ -259,7 +259,7 @@ int window_height = 600.0f;
 #define ENEMY_EYE 3
 #define ENEMY_MIDDLE 4
 #define ENEMY_BOTTOM 5
-#define TREE 6
+#define METAL 6
 #define BARRICADE 7
 #define WALL 8
 #define ROOF 9
@@ -346,8 +346,6 @@ int main(int argc, char* argv[])
     // Hide and capture the mouse cursor for FPS-style camera control
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-
-    glfwSwapInterval(0); // Desabilita VSync, para que o programa rode a 60 FPS ou mais
     // Definimos a função de callback que será chamada sempre que o usuário
     // pressionar alguma tecla do teclado ...
     glfwSetKeyCallback(window, KeyCallback);
@@ -361,6 +359,7 @@ int main(int argc, char* argv[])
     // Indicamos que as chamadas OpenGL deverão renderizar nesta janela
     glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(0); // Desabilita VSync, para que o programa rode a 60 FPS ou mais
     // Carregamento de todas funções definidas por OpenGL 3.3, utilizando a
     // biblioteca GLAD.
     gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
@@ -385,8 +384,8 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
-    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
+    LoadTextureImage("../../data/textures/Type02/Tex_0010_1.png");      // TextureImage0
+    LoadTextureImage("../../data/textures/Type02/Tex_0010_1.png"); // TextureImage1
     LoadTextureImage("../../data/textures/worn_tile_floor_diff_1k.jpg"); // TextureImage2
     LoadTextureImage("../../data/textures/Type01/Head.png"); // TextureImage3
     LoadTextureImage("../../data/textures/Type01/Body.png"); // TextureImage4
@@ -400,7 +399,7 @@ int main(int argc, char* argv[])
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
-    ObjModel barricade("../../data/10551_ConcreteConstructionBarricade_v1-L3.obj");
+    ObjModel barricade("../../data/concrete_barrier.obj");
     ComputeNormals(&barricade);
     BuildTrianglesAndAddToVirtualScene(&barricade);
 
@@ -525,7 +524,6 @@ int main(int argc, char* argv[])
 
 
         float camera_height = 1.7f;     // Altura da câmera em relação ao chão
-        float camera_distance = 1.0f;   // Distância para trás do personagem
         float camera_side_offset = 0.5f; // Distância lateral
         float target_distance = 100.0f; // Distância até o ponto alvo (para onde a câmera está olhando)
 
@@ -623,23 +621,22 @@ int main(int argc, char* argv[])
        // #define PROJECTILE_LINE 12
 
 
-        for (const auto& tree_position : g_TreePositions) {
-            auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
-            if (dist < 25.0f) {  // deixar esse valor igual ou similar ao max_dist
-                model = Matrix_Translate(tree_position.x, tree_position.y, tree_position.z)*Matrix_Scale(0.015f, 0.015f, 0.015f)*Matrix_Rotate_X(-3.141592f/2.0f);
+        for (const auto& position : g_TreePositions) {
+            //auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
+                model = Matrix_Translate(position.x, position.y, position.z)*Matrix_Scale(1.0f, 1.0f, 1.0f);
                 glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
-                /*for (int j = 0; j < 5; j++) {
-                    const auto& shape = treemodel.shapes[j];
-
-                    glUniform1i(g_object_id_uniform, TREE_BRANCH + j);
-                    DrawVirtualObject(shape.name.c_str());
-                }*/
-                //const auto& shape = barricade.shapes[0];
-                glUniform1i(g_object_id_uniform, BARRICADE);
-                DrawVirtualObject("ConcreteConstructionBarrier");
-            }
+                for (int j = 0; j < 5; j++) {
+                    if (j == 1){
+                        glUniform1i(g_object_id_uniform, BARRICADE);
+                    }
+                    else{
+                        glUniform1i(g_object_id_uniform, METAL);
+                    }
+                    DrawVirtualObject(barricade.shapes[j].name.c_str());
+                }
         }
+        
         //character = Matrix_Translate(0.0f,1.0f,0.0f);
         model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
