@@ -266,6 +266,20 @@ int window_height = 600.0f;
 #define TREE_BRANCH3 10
 #define CROSSHAIR 11
 #define PROJECTILE_LINE 12
+#define RGZ89 13
+#define WZ96_Beryl 14
+#define boot_war1 15
+#define glass 16
+#define magb 17
+#define material 18
+#define pol_bproof 19
+#define pol_filter 20
+#define pol_gas_mask 21
+#define pol_hand 22
+#define pol_head 23
+#define pol_helmet 24
+#define pol_jaket 25
+#define pol_pants 26
 
 // Simple ray-sphere intersection for trees
 bool RayIntersectsSphere(glm::vec3 ray_origin, glm::vec3 ray_direction, glm::vec3 sphere_center, float sphere_radius, float& hit_distance) {
@@ -392,7 +406,20 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/textures/Type01/Lower.png"); // TextureImage5
     LoadTextureImage("../../data/textures/concrete_wall_007_diff_1k.jpg"); // TextureImage6
     LoadTextureImage("../../data/textures/bitumen_diff_1k.jpg"); // TextureImage7
-    LoadTextureImage("../../data/concreteconstructionbBarricade.jpg"); // TextureImage8
+    LoadTextureImage("../../data/textures/granular_concrete_diff_1k.jpg"); // TextureImage8
+    LoadTextureImage("../../data/textures/Image_38.png"); // TextureImage9
+    LoadTextureImage("../../data/textures/Image_13.png"); // TextureImage10
+    LoadTextureImage("../../data/textures/Image_17.png"); // TextureImage11
+    LoadTextureImage("../../data/textures/Image_20.png"); // TextureImage12
+    LoadTextureImage("../../data/textures/Image_0.png"); // TextureImage13
+    LoadTextureImage("../../data/textures/Image_23.png"); // TextureImage14
+    LoadTextureImage("../../data/textures/Image_3.png"); // TextureImage15
+    LoadTextureImage("../../data/textures/Image_6.png"); // TextureImage16
+    LoadTextureImage("../../data/textures/Image_26.png"); // TextureImage17
+    LoadTextureImage("../../data/textures/Image_29.png"); // TextureImage18
+    LoadTextureImage("../../data/textures/Image_10.png"); // TextureImage19
+    LoadTextureImage("../../data/textures/Image_32.png"); // TextureImage20
+    LoadTextureImage("../../data/textures/Image_35.png"); // TextureImage21
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
     ObjModel planemodel("../../data/plane.obj");
@@ -403,6 +430,10 @@ int main(int argc, char* argv[])
     ComputeNormals(&barricade);
     BuildTrianglesAndAddToVirtualScene(&barricade);
 
+    ObjModel player("../../data/character.obj");
+    ComputeNormals(&player);
+    BuildTrianglesAndAddToVirtualScene(&player);
+
     g_TreePositions.clear();
     for (int i = 0; i < 20; i++) {
         g_TreePositions.push_back(glm::vec3(((rand() % 200) - 100) / 5.0f, 0.0f, ((rand() % 200) - 100) / 5.0f));
@@ -411,17 +442,6 @@ int main(int argc, char* argv[])
     ObjModel enemymodel("../../data/Soldier.obj");
     ComputeNormals(&enemymodel);
     BuildTrianglesAndAddToVirtualScene(&enemymodel);
-
-    std::map<std::string, GLuint> material_to_texture;
-/*  FONTE = COPILOT
-    for (size_t i = 0; i < enemymodel.materials.size(); ++i) {
-        std::string texname = enemymodel.materials[i].diffuse_texname;
-        if (!texname.empty()) {
-            std::string fullpath = std::string("../../data/") + texname;
-            LoadTextureImage(fullpath.c_str()); // This uses your existing loader
-            material_to_texture[enemymodel.materials[i].name] = g_NumLoadedTextures - 1; // Texture unit
-        }
-    } */
 
     if ( argc > 1 )
     {
@@ -637,11 +657,79 @@ int main(int argc, char* argv[])
                 }
         }
         
-        //character = Matrix_Translate(0.0f,1.0f,0.0f);
-        model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+        model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
+        for (size_t j = 0; j < player.shapes.size(); ++j) {
+            switch(j){
+                case 0:
+                    glUniform1i(g_object_id_uniform, material);
+                    break;
+                case 1:
+                    glUniform1i(g_object_id_uniform, pol_filter);
+                    break;
+                case 2:
+                    glUniform1i(g_object_id_uniform, pol_gas_mask);
+                    break;
+                case 3:
+                    glUniform1i(g_object_id_uniform, glass);
+                    break;
+                case 4:
+                    glUniform1i(g_object_id_uniform, pol_helmet);
+                    break;
+                case 5:
+                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                    break;
+                case 6:
+                    glUniform1i(g_object_id_uniform, boot_war1);
+                    break;
+                case 7:
+                    glUniform1i(g_object_id_uniform, magb);
+                    break;
+                case 8:
+                    glUniform1i(g_object_id_uniform, magb);
+                    break;
+                case 9:
+                    glUniform1i(g_object_id_uniform, magb);
+                    break;
+                case 10:
+                    glUniform1i(g_object_id_uniform, pol_bproof);
+                    break;
+                case 11:
+                    glUniform1i(g_object_id_uniform, pol_hand);
+                    break;
+                case 12:
+                    glUniform1i(g_object_id_uniform, pol_head);
+                    break;
+                case 13:
+                    glUniform1i(g_object_id_uniform, pol_jaket);
+                    break;
+                case 14:
+                    glUniform1i(g_object_id_uniform, pol_pants);
+                    break;
+                case 15:
+                    glUniform1i(g_object_id_uniform, RGZ89);
+                    break;
+                case 16:
+                    glUniform1i(g_object_id_uniform, RGZ89);
+                    break;
+                case 17:
+                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                    break;
+                case 18:
+                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                    break;
+                case 19:
+                    glUniform1i(g_object_id_uniform, WZ96_Beryl);
+                    break;
+                default:
+                    break;
+            }
+            DrawVirtualObject(player.shapes[j].name.c_str());
+        }
 
+        model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
         // Desenhamos o modelo do inimigo FONTE: COPILOT
         if(!FirstPerson){
@@ -948,6 +1036,19 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage6"), 6);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage7"), 7);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage8"), 8);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage9"), 9);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage10"), 10);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage11"), 11);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage12"), 12);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage13"), 13);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage14"), 14);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage15"), 15);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage16"), 16);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage17"), 17);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage18"), 18);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage19"), 19);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage20"), 20);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage21"), 21);
     glUseProgram(0);
 }
 

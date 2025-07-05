@@ -37,7 +37,20 @@ uniform float projectile_alpha;
 #define TREE_BRANCH3 10
 #define CROSSHAIR 11
 #define PROJECTILE_LINE 12
-#define TREE_WALL 13
+#define RGZ89 13
+#define WZ96_Beryl 14
+#define boot_war1 15
+#define glass 16
+#define magb 17
+#define material 18
+#define pol_bproof 19
+#define pol_filter 20
+#define pol_gas_mask 21
+#define pol_hand 22
+#define pol_head 23
+#define pol_helmet 24
+#define pol_jaket 25
+#define pol_pants 26
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -54,6 +67,19 @@ uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
 uniform sampler2D TextureImage7;
 uniform sampler2D TextureImage8;
+uniform sampler2D TextureImage9;
+uniform sampler2D TextureImage10;
+uniform sampler2D TextureImage11;
+uniform sampler2D TextureImage12;
+uniform sampler2D TextureImage13;
+uniform sampler2D TextureImage14;
+uniform sampler2D TextureImage15;
+uniform sampler2D TextureImage16;
+uniform sampler2D TextureImage17;
+uniform sampler2D TextureImage18;
+uniform sampler2D TextureImage19;
+uniform sampler2D TextureImage20;
+uniform sampler2D TextureImage21;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -253,11 +279,221 @@ void main()
     }
     else if ( object_id == BARRICADE)
     {
-        vec3 Kd0 = vec3(0.500000, 0.500000, 0.500000); // Quase sem cor
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage8, vec2(U,V)).rgb;; // Quase sem cor
         vec3 Ks0 = vec3(0.595455, 0.595455, 0.595455); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float Ns = 49.607449; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == RGZ89)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage9, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == WZ96_Beryl)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage10, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == boot_war1)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage11, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == glass)
+    {
+
+        vec3 Kd0 = vec3(0.0,0.0,0.0);
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == magb)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage12, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == material)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage13, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == pol_bproof)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage14, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == pol_filter)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage15, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == pol_gas_mask)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage16, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+    }
+    else if ( object_id == pol_hand)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage17, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == pol_head)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage18, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == pol_helmet)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage19, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10%
+    }
+    else if ( object_id == pol_jaket)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage20, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == pol_pants)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage21, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.5, 0.5, 0.5); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
 
         specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
         diffuse.rgb = Kd0 * lambert;
