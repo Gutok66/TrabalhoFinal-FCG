@@ -48,6 +48,9 @@
 #include "utils.h"
 #include "matrices.h"
 
+// Header da colisão
+#include "collision.h"
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -168,14 +171,6 @@ struct SceneObject
     glm::vec3    bbox_max;
 };
 
-// Estrutura com dados para tiro (projectile)
-// Add these variables after the other global variables (around line 200):
-struct Projectile {
-    glm::vec3 start_position;
-    glm::vec3 end_position;
-    bool active;
-    float creation_time;
-};
 
 std::vector<Projectile> g_Projectiles;
 const float PROJECTILE_LIFETIME = 1.0f; // seconds
