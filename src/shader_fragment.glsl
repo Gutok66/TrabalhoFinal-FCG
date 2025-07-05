@@ -21,6 +21,8 @@ uniform mat4 projection;
 // variavel para projetil
 uniform float projectile_alpha;
 
+
+
 // Identificador que define qual objeto está sendo desenhado no momento
 #define PLANE 0
 #define ENEMY_HEAD 1

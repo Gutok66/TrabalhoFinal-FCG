@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
-// This tells the compiler that g_TreePositions is a global variable
-// that will be defined and managed in another file (like main.cpp).
+// This tells the compiler that g_TreePositions is defined in another file (main.cpp)
 extern std::vector<glm::vec3> g_TreePositions;
 
 // --- Variable Definitions ---
@@ -17,7 +17,6 @@ std::vector<Projectile> Physics::Projectiles;
 float Physics::CharacterVerticalVelocity = 0.0f;
 bool Physics::IsCharacterGrounded = true;
 
-
 // --- Function Implementations ---
 
 void Physics::Initialize() {
@@ -25,6 +24,100 @@ void Physics::Initialize() {
     Physics::CharacterVerticalVelocity = 0.0f;
     Physics::IsCharacterGrounded = true;
 }
+
+void Physics::ApplyPlayerPhysics(GLFWwindow* window, glm::vec3& character_position, float deltaTime) {
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && Physics::IsCharacterGrounded) {
+        Physics::CharacterVerticalVelocity = Physics::JUMP_FORCE;
+        Physics::IsCharacterGrounded = false;
+    }
+
+    Physics::CharacterVerticalVelocity += Physics::GRAVITY * deltaTime;
+    character_position.y += Physics::CharacterVerticalVelocity * deltaTime;
+
+    if (character_position.y <= 0.0f) {
+        character_position.y = 0.0f;
+        Physics::CharacterVerticalVelocity = 0.0f;
+        Physics::IsCharacterGrounded = true;
+    }
+}
+
+void Physics::UpdateProjectiles(float currentTime) {
+    // We only remove projectiles based on their lifetime.
+    for (auto it = Physics::Projectiles.begin(); it != Physics::Projectiles.end(); ) {
+        if ((currentTime - it->creation_time) > Physics::PROJECTILE_LIFETIME) {
+            it = Physics::Projectiles.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Physics::HandleShooting(const glm::vec3& character_position,
+                             float cameraTheta, float cameraPhi,
+                             float cameraDistance, bool firstPerson) {
+    glm::vec3 character_front = glm::vec3(cos(cameraPhi) * sin(cameraTheta), -sin(cameraPhi), cos(cameraPhi) * cos(cameraTheta));
+    glm::vec3 character_right = glm::vec3(-cos(cameraTheta), 0.0f, sin(cameraTheta));
+
+    float camera_height = 1.7f;
+    glm::vec3 camera_position = character_position + glm::vec3(0.0f, camera_height, 0.0f);
+    if (!firstPerson) {
+        camera_position -= character_front * cameraDistance;
+        camera_position += character_right * 0.5f;
+    }
+
+    glm::vec3 camera_lookat = camera_position + character_front * 100.0f;
+    glm::vec3 projectile_direction = glm::normalize(camera_lookat - camera_position);
+    glm::vec3 projectile_start = camera_position + projectile_direction * 1.5f;
+
+    float closest_hit_distance = Physics::PROJECTILE_MAX_DISTANCE;
+    
+    float hit_distance; // Reusable variable for distance checks
+
+    // --- Check all 6 planes of the world box ---
+
+    // Ground (y=0)
+    if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, WorldBounds::MinY, 0), glm::vec3(0, 1, 0), hit_distance)) {
+        closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+    // Roof (y=10)
+    if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, WorldBounds::MaxY, 0), glm::vec3(0, -1, 0), hit_distance)) {
+        closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+    // Left Wall (x=-20)
+    if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(WorldBounds::MinX, 0, 0), glm::vec3(1, 0, 0), hit_distance)) {
+        closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+    // Right Wall (x=20)
+    if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(WorldBounds::MaxX, 0, 0), glm::vec3(-1, 0, 0), hit_distance)) {
+        closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+    // Back Wall (z=-20)
+    if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, 0, WorldBounds::MinZ), glm::vec3(0, 0, 1), hit_distance)) {
+        closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+    // Front Wall (z=20)
+    if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, 0, WorldBounds::MaxZ), glm::vec3(0, 0, -1), hit_distance)) {
+        closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+
+    // --- Check collision with trees ---
+    for (const auto& tree_position : g_TreePositions) {
+        float tree_hit_distance;
+        float tree_radius = 2.0f;
+        if (Physics::RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {
+            closest_hit_distance = std::min(closest_hit_distance, tree_hit_distance);
+        }
+    }
+
+    Projectile new_projectile;
+    new_projectile.start_position = projectile_start;
+    new_projectile.end_position = projectile_start + projectile_direction * closest_hit_distance;
+    new_projectile.active = true;
+    new_projectile.creation_time = (float)glfwGetTime();
+
+    Physics::Projectiles.push_back(new_projectile);
+}
+
 
 bool Physics::RayIntersectsSphere(glm::vec3 ray_origin, glm::vec3 ray_direction,
                                   glm::vec3 sphere_center, float sphere_radius,
@@ -57,7 +150,6 @@ bool Physics::RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction,
     if (std::abs(ray_direction.y) < 0.001f) {
         return false;
     }
-
     float t = -ray_origin.y / ray_direction.y;
     if (t > 0) {
         hit_distance = t;
@@ -66,60 +158,24 @@ bool Physics::RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction,
     return false;
 }
 
-void Physics::ApplyPlayerPhysics(GLFWwindow* window, glm::vec3& character_position, float deltaTime) {
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && Physics::IsCharacterGrounded) {
-        Physics::CharacterVerticalVelocity = Physics::JUMP_FORCE;
-        Physics::IsCharacterGrounded = false;
+// In collision.cpp, with the other collision functions
+bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
+                                 glm::vec3 plane_point, glm::vec3 plane_normal,
+                                 float& hit_distance) {
+    float denominator = glm::dot(plane_normal, ray_direction);
+
+    // If the denominator is close to zero, the ray is parallel to the plane
+    if (std::abs(denominator) < 0.0001f) {
+        return false;
     }
 
-    Physics::CharacterVerticalVelocity += Physics::GRAVITY * deltaTime;
+    float t = glm::dot(plane_point - ray_origin, plane_normal) / denominator;
 
-    character_position.y += Physics::CharacterVerticalVelocity * deltaTime;
-
-    if (character_position.y <= 0.0f) {
-        character_position.y = 0.0f;
-        Physics::CharacterVerticalVelocity = 0.0f;
-        Physics::IsCharacterGrounded = true;
-    }
-}
-
-void Physics::HandleShooting(const glm::vec3& character_position,
-                             float cameraTheta, float cameraPhi,
-                             float cameraDistance, bool firstPerson) {
-    glm::vec3 character_front = glm::vec3(cos(cameraPhi) * sin(cameraTheta), -sin(cameraPhi), cos(cameraPhi) * cos(cameraTheta));
-    glm::vec3 character_right = glm::vec3(-cos(cameraTheta), 0.0f, sin(cameraTheta));
-
-    float camera_height = 1.7f;
-    glm::vec3 camera_position = character_position + glm::vec3(0.0f, camera_height, 0.0f);
-    if (!firstPerson) {
-        camera_position -= character_front * cameraDistance;
-        camera_position += character_right * 0.5f;
+    // We only care about intersections in front of the ray
+    if (t > 0.0f) {
+        hit_distance = t;
+        return true;
     }
 
-    glm::vec3 camera_lookat = camera_position + character_front * 100.0f;
-    glm::vec3 projectile_direction = glm::normalize(camera_lookat - camera_position);
-    glm::vec3 projectile_start = camera_position + projectile_direction * 1.5f;
-
-    float closest_hit_distance = Physics::PROJECTILE_MAX_DISTANCE;
-
-    float ground_hit_distance;
-    if (Physics::RayIntersectsGround(projectile_start, projectile_direction, ground_hit_distance)) {
-        closest_hit_distance = std::min(closest_hit_distance, ground_hit_distance);
-    }
-
-    for (const auto& tree_position : g_TreePositions) {
-        float tree_hit_distance;
-        float tree_radius = 2.0f;
-        if (Physics::RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {
-            closest_hit_distance = std::min(closest_hit_distance, tree_hit_distance);
-        }
-    }
-
-    Projectile new_projectile;
-    new_projectile.start_position = projectile_start;
-    new_projectile.end_position = projectile_start + projectile_direction * closest_hit_distance;
-    new_projectile.active = true;
-    new_projectile.creation_time = (float)glfwGetTime();
-
-    Physics::Projectiles.push_back(new_projectile);
+    return false;
 }

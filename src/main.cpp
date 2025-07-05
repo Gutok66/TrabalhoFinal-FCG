@@ -545,6 +545,9 @@ int main(int argc, char* argv[])
         lastFrame = currentFrame;
         ProcessInput(window, character_position, deltaTime);
 
+        
+        
+
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::vec4 g_CameraFront = glm::vec4(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta), 0.0f);
@@ -692,63 +695,62 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, ROOF);
         DrawVirtualObject("the_plane");
 
-        // Update and render projectiles
-        float current_time = (float)glfwGetTime();
-        for (auto it = g_Projectiles.begin(); it != g_Projectiles.end();) {
-            if (current_time - it->creation_time > PROJECTILE_LIFETIME) {
-                it = g_Projectiles.erase(it);
-            } else {
-                // Calculate fade alpha based on age
-                float age = current_time - it->creation_time;
-                float fade_alpha = 1.0f - (age / PROJECTILE_LIFETIME); // Fade from 1.0 to 0.0
-                
-                // Render projectile as a thick line
-                glDisable(GL_DEPTH_TEST);
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                
-                // Set line width to make it thicker
-                glLineWidth(5.0f);
-                
-                // Create line vertices
-                float line_vertices[] = {
-                    it->start_position.x, it->start_position.y, it->start_position.z, 1.0f,
-                    it->end_position.x, it->end_position.y, it->end_position.z, 1.0f
-                };
-                
-                GLuint lineVAO, lineVBO;
-                glGenVertexArrays(1, &lineVAO);
-                glGenBuffers(1, &lineVBO);
-                
-                glBindVertexArray(lineVAO);
-                glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
-                
-                glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-                glEnableVertexAttribArray(0);
-                
-                // Set uniforms
-                glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
-                glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(view));
-                glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
-                glUniform1i(g_object_id_uniform, PROJECTILE_LINE);
-                
-                // Pass fade alpha to shader
-                glUniform1f(g_projectile_alpha_uniform, fade_alpha);
-                
-                // Draw line
-                glDrawArrays(GL_LINES, 0, 2);
-                
-                // Cleanup
-                glDeleteBuffers(1, &lineVBO);
-                glDeleteVertexArrays(1, &lineVAO);
-                glLineWidth(1.0f); // Reset line width
-                
-                glDisable(GL_BLEND);
-                glEnable(GL_DEPTH_TEST);
-                
-                ++it;
-            }
+        // 1. Update all projectiles (this handles the logic of removing old ones)
+        float currentTime = (float)glfwGetTime();
+        Physics::UpdateProjectiles(currentTime);
+
+
+        // 2. Render all active projectiles that remain
+        for (const auto& projectile : Physics::Projectiles)
+        {
+            // Calculate fade alpha based on age
+            float age = currentTime - projectile.creation_time;
+            float fade_alpha = 1.0f - (age / Physics::PROJECTILE_LIFETIME);
+
+            // Render projectile as a thick line
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            
+            // Set line width to make it thicker
+            glLineWidth(5.0f);
+            
+            // Create line vertices using the 'projectile' variable
+            float line_vertices[] = {
+                projectile.start_position.x, projectile.start_position.y, projectile.start_position.z, 1.0f,
+                projectile.end_position.x,   projectile.end_position.y,   projectile.end_position.z,   1.0f
+            };
+            
+            GLuint lineVAO, lineVBO;
+            glGenVertexArrays(1, &lineVAO);
+            glGenBuffers(1, &lineVBO);
+            
+            glBindVertexArray(lineVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+            
+            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
+            
+            // Set uniforms
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+            glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+            glUniform1i(g_object_id_uniform, PROJECTILE_LINE);
+            
+            // Pass fade alpha to shader
+            glUniform1f(g_projectile_alpha_uniform, fade_alpha);
+            
+            // Draw line
+            glDrawArrays(GL_LINES, 0, 2);
+            
+            // Cleanup
+            glDeleteBuffers(1, &lineVBO);
+            glDeleteVertexArrays(1, &lineVAO);
+            glLineWidth(1.0f); // Reset line width
+            
+            glDisable(GL_BLEND);
+            glEnable(GL_DEPTH_TEST);
         }
 
         // Desenha a crosshair 2D no centro da tela
@@ -1555,70 +1557,21 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
 
     // Apertar F para atirar
+    // Apertar F para atirar
     if (key == GLFW_KEY_F && action == GLFW_PRESS)
     {
-        if (Ammo > 0){
-        // Calculate camera direction (same as crosshair direction)
-        glm::vec3 character_front = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));
-        glm::vec3 character_right = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
-        
-        // Camera position (same calculation as in main loop)
-        float camera_height = 1.7f;
-        float camera_side_offset = 0.5f;
-        glm::vec3 camera_position = character_position - character_front * g_CameraDistance + character_right * camera_side_offset + glm::vec3(0.0f, camera_height, 0.0f);
-        // Camera look direction (same calculation as in main loop)
-        float target_distance = 100.0f;
-        float look_vertical = sin(g_CameraPhi);
-        glm::vec3 camera_lookat = character_position + character_front * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f);
-        
-        // Calculate actual camera view direction
-        glm::vec3 projectile_direction = normalize(camera_lookat - camera_position);
-        
-        // Adjust projectile start position to align with crosshair
-        float projectile_start_distance = 1.5f; // Distance in front of character
-        float right_offset = 0.3f; // Move projectile to the right
-        float up_offset = 0.2f; // Move projectile up
-        
-        glm::vec3 projectile_start = camera_position + projectile_direction * projectile_start_distance; // Forward distance
-
-        
-        // Perform raycasting to find hit point
-        float closest_hit_distance = PROJECTILE_MAX_DISTANCE;
-        bool hit_something = false;
-        
-        // Check collision with ground
-        float ground_hit_distance;
-        if (RayIntersectsGround(projectile_start, projectile_direction, ground_hit_distance)) {
-            if (ground_hit_distance < closest_hit_distance) {
-                closest_hit_distance = ground_hit_distance;
-                hit_something = true;
-            }
-        }
-        
-        // Check collision with trees
-        for (const auto& tree_position : g_TreePositions) {
-            float tree_hit_distance;
-            float tree_radius = 2.0f;
-            if (RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {
-                if (tree_hit_distance < closest_hit_distance) {
-                    closest_hit_distance = tree_hit_distance;
-                    hit_something = true;
-                }
-            }
-        }
-
-        // Create projectile
-        Projectile new_projectile;
-        new_projectile.start_position = projectile_start;
-        new_projectile.end_position = projectile_start + projectile_direction * closest_hit_distance;
-        new_projectile.active = true;
-        new_projectile.creation_time = (float)glfwGetTime();
-        
-        g_Projectiles.push_back(new_projectile);
-        Ammo--; // Decrementa munição
-        }
-        else {
-            
+        if (Ammo > 0)
+        {
+            // Call the correct function from our Physics system.
+            // This will add the projectile to the correct list (Physics::Projectiles).
+            Physics::HandleShooting(
+                character_position,
+                g_CameraTheta,
+                g_CameraPhi,
+                g_CameraDistance,
+                FirstPerson
+            );
+            Ammo--; // Decrementa munição
         }
     }
 }
