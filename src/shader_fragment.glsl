@@ -28,7 +28,7 @@ uniform float projectile_alpha;
 #define ENEMY_EYE 3
 #define ENEMY_MIDDLE 4
 #define ENEMY_BOTTOM 5
-#define TREE 6
+#define METAL 6
 #define BARRICADE 7
 #define WALL 8
 #define ROOF 9
@@ -52,7 +52,6 @@ uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
 uniform sampler2D TextureImage7;
 uniform sampler2D TextureImage8;
-
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -85,6 +84,9 @@ void main()
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
 
+    // Vetor que define o sentido da reflexão especular ideal.
+    vec4 r = -l + 2.0*n*dot(n,l);
+
     // Coordenadas de textura U e V
     float U = 0.0;
     float V = 0.0;
@@ -92,9 +94,10 @@ void main()
     U = texcoords.x;
     V = texcoords.y;
     // default: cor preta
-    color = vec4(0.0, 0.0, 0.0, 1.0); // Black with full alpha
-    
-    color.a = 1;
+    color = vec4(1.0, 0.0, 0.0, 1.0); // Black with full alpha
+    vec4 ambient = vec4(0.0, 0.0, 0.0, 1.0); // Cor ambiente
+    vec4 diffuse = vec4(0.0, 0.0, 0.0, 1.0); // Cor difusa
+    vec4 specular = vec4(0.0, 0.0, 0.0, 1.0); // Cor especular
      if ( object_id == PLANE )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
@@ -112,7 +115,8 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.1);
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if ( object_id == ENEMY_HEAD)
     {
@@ -125,7 +129,36 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.1);
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == ENEMY_FACE)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage3, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if ( object_id == ENEMY_EYE)
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+
+        vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if ( object_id == ENEMY_MIDDLE)
     {
@@ -138,7 +171,8 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.1);
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if ( object_id == ENEMY_BOTTOM)
     {
@@ -151,7 +185,8 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0 * (lambert + 0.1);
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if ( object_id == WALL)
     {
@@ -165,13 +200,13 @@ void main()
         U = fract(U);
         V = fract(V);
 
-        vec4 Kd0 = texture(TextureImage6, vec2(U,V));
+        vec3 Kd0 = texture(TextureImage6, vec2(U,V)).rgb;
 
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0.rgb * (lambert + 0.1);
-        color.a = Kd0.a;
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if ( object_id == ROOF)
     {
@@ -185,50 +220,48 @@ void main()
         U = fract(U);
         V = fract(V);
 
-        vec4 Kd0 = texture(TextureImage7, vec2(U,V));
+        vec3 Kd0 = texture(TextureImage7, vec2(U,V)).rgb;
 
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        color.rgb = Kd0.rgb * (lambert + 0.1);
-        color.a = Kd0.a;
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
-    else if ( object_id == TREE_BRANCH3)
+    else if ( object_id == METAL)
     {
-        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
-        U = texcoords.x;
-        V = texcoords.y;
-
-        vec4 Kd0 = texture(TextureImage7, vec2(U,V));
-
+        vec3 Kd0 = vec3(0.008905, 0.008905, 0.008905); // Quase sem cor
+        vec3 Ks0 = vec3(0.300000, 0.300000, 0.300000); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
+        float Ns = 87.293396; // Exponente especular
 
-        color.rgb = Kd0.rgb * (lambert + 0.1);
-        color.a = Kd0.a;
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if ( object_id == CROSSHAIR)
     {
 
-        color = vec4(1.0, 0.0, 0.0, 1.0); // Red with full alpha
+        diffuse = vec4(1.0, 0.0, 0.0, 1.0); // Red with full alpha
     }
     else if ( object_id == PROJECTILE_LINE)
     {
-        color = vec4(1.0, 1.0, 0.0, projectile_alpha); // Yellow with fading alpha
+        diffuse = vec4(1.0, 1.0, 0.0, projectile_alpha); // Yellow with fading alpha
     }
     else if ( object_id == BARRICADE)
     {
-        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
-        U = texcoords.x;
-        V = texcoords.y;
-
-        vec3 Kd0 = texture(TextureImage8, vec2(U,V)).rgb;
-
+        vec3 Kd0 = vec3(0.500000, 0.500000, 0.500000); // Quase sem cor
+        vec3 Ks0 = vec3(0.595455, 0.595455, 0.595455); // Cor especular
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
+        float Ns = 49.607449; // Exponente especular
 
-        color.rgb = Kd0 * (lambert + 0.1);
+        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
+    color = ambient + diffuse + specular;
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
 //
@@ -252,12 +285,12 @@ void main()
     //    transparentes que estão mais longe da câmera).
     // Alpha default = 1 = 100% opaco = 0% transparente
 
-    float dist = length(position_world - camera_position);
-    float max_dist = 25.0;  
-    float min_dist = 3.0;  
+    //float dist = length(position_world - camera_position);
+    //float max_dist = 25.0;  
+    //float min_dist = 3.0;  
 
-    float alpha = min(1.0, max(0, (dist-min_dist) / max_dist)); 
-    vec3 cor_nevoa = vec3(1.0,1.0,1.0);
+    //float alpha = min(1.0, max(0, (dist-min_dist) / max_dist)); 
+    //vec3 cor_nevoa = vec3(1.0,1.0,1.0);
     //color.rgb = mix(color.rgb, cor_nevoa, alpha);
     //color.rgb = color.rgb + alpha*(cor_nevoa - color.rgb);
     //color.rgb = color.rgb*(1-alpha) + vec3(alpha,alpha,alpha);
