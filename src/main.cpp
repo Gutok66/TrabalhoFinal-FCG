@@ -266,8 +266,8 @@ int window_height = 600.0f;
 #define ENEMY_BOTTOM 5
 #define TREE 6
 #define BARRICADE 7
-#define TREE_LEAVES 8
-#define TREE_BRANCH2 9
+#define WALL 8
+#define ROOF 9
 #define TREE_BRANCH3 10
 #define CROSSHAIR 11
 #define PROJECTILE_LINE 12
@@ -392,12 +392,12 @@ int main(int argc, char* argv[])
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
-    LoadTextureImage("../../data/rocky_terrain_02_diff_4k.jpg"); // TextureImage2
+    LoadTextureImage("../../data/textures/worn_tile_floor_diff_1k.jpg"); // TextureImage2
     LoadTextureImage("../../data/textures/Type01/Head.png"); // TextureImage3
     LoadTextureImage("../../data/textures/Type01/Body.png"); // TextureImage4
     LoadTextureImage("../../data/textures/Type01/Lower.png"); // TextureImage5
-    LoadTextureImage("../../data/textures/Maple_AE3D_03272021-A2-50pc.png"); // TextureImage6
-    LoadTextureImage("../../data/textures/GenTree_1_Trunk_Limbs_AE3D_03312023-A-DIFFUSE.png"); // TextureImage7
+    LoadTextureImage("../../data/textures/concrete_wall_007_diff_1k.jpg"); // TextureImage6
+    LoadTextureImage("../../data/textures/bitumen_diff_1k.jpg"); // TextureImage7
     LoadTextureImage("../../data/concreteconstructionbBarricade.jpg"); // TextureImage8
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
@@ -670,6 +670,31 @@ int main(int argc, char* argv[])
         model = Matrix_Translate(0.0f,0.0f,0.0f) * Matrix_Scale(20.0f, 1.0f, 20.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
+        DrawVirtualObject("the_plane");
+
+        model = Matrix_Translate(0.0f,5.0f,20.0f) * Matrix_Rotate_X(-3.141592f/2.0f) * Matrix_Scale(20.0f, 1.0f, 5.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, WALL);
+        DrawVirtualObject("the_plane");
+
+        model = Matrix_Translate(0.0f,5.0f,-20.0f) * Matrix_Rotate_X(3.141592f/2.0f) * Matrix_Scale(20.0f, 1.0f, 5.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, WALL);
+        DrawVirtualObject("the_plane");
+
+        model = Matrix_Translate(20.0f,5.0f,0.0f) * Matrix_Rotate_Y(3.141592f/2.0f) * Matrix_Rotate_X(-3.141592f/2.0f) * Matrix_Scale(20.0f, 1.0f, 5.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, WALL);
+        DrawVirtualObject("the_plane");
+
+        model = Matrix_Translate(-20.0f,5.0f,0.0f) * Matrix_Rotate_Y(3.141592f/2.0f) * Matrix_Rotate_X(3.141592f/2.0f) * Matrix_Scale(20.0f, 1.0f, 5.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, WALL);
+        DrawVirtualObject("the_plane");
+
+        model = Matrix_Translate(0.0f,10.0f,0.0f) * Matrix_Scale(20.0f, 1.0f, 20.0f) * Matrix_Rotate_X(-3.141592f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, ROOF);
         DrawVirtualObject("the_plane");
 
         // Update and render projectiles

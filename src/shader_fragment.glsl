@@ -30,8 +30,8 @@ uniform float projectile_alpha;
 #define ENEMY_BOTTOM 5
 #define TREE 6
 #define BARRICADE 7
-#define TREE_LEAVES 8
-#define TREE_BRANCH2 9
+#define WALL 8
+#define ROOF 9
 #define TREE_BRANCH3 10
 #define CROSSHAIR 11
 #define PROJECTILE_LINE 12
@@ -101,8 +101,8 @@ void main()
         U = texcoords.x;
         V = texcoords.y;
 
-        U = U * 5.0; // Repete 5 vezes na direção U
-        V = V * 5.0; // Repete 5 vezes na direção V
+        U = U * 10.0; // Repete 5 vezes na direção U
+        V = V * 10.0; // Repete 5 vezes na direção V
 
         U = fract(U);
         V = fract(V);
@@ -153,11 +153,17 @@ void main()
 
         color.rgb = Kd0 * (lambert + 0.1);
     }
-    else if ( object_id == TREE_LEAVES)
+    else if ( object_id == WALL)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
         V = texcoords.y;
+
+        U = U * 12.0; // Repete 12 vezes na direção U
+        V = V * 3.0; // Repete 3 vezes na direção V
+
+        U = fract(U);
+        V = fract(V);
 
         vec4 Kd0 = texture(TextureImage6, vec2(U,V));
 
@@ -165,29 +171,19 @@ void main()
         float lambert = max(0,dot(n,l));
 
         color.rgb = Kd0.rgb * (lambert + 0.1);
-        color.a = 0;
-        //if (color.g < 1.0)
-            //discard;
-    }
-    else if ( object_id == TREE_BRANCH2)
-    {
-        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
-        U = texcoords.x;
-        V = texcoords.y;
-
-        vec4 Kd0 = texture(TextureImage7, vec2(U,V));
-
-        // Equação de Iluminação
-        float lambert = max(0,dot(n,l));
-
-        color.rgb = Kd0.rgb * (lambert + 0.1);
         color.a = Kd0.a;
     }
-    else if ( object_id == 8)
+    else if ( object_id == ROOF)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
         V = texcoords.y;
+
+        U = U * 5.0; // Repete 5 vezes na direção U
+        V = V * 5.0; // Repete 5 vezes na direção V
+
+        U = fract(U);
+        V = fract(V);
 
         vec4 Kd0 = texture(TextureImage7, vec2(U,V));
 
@@ -262,7 +258,7 @@ void main()
 
     float alpha = min(1.0, max(0, (dist-min_dist) / max_dist)); 
     vec3 cor_nevoa = vec3(1.0,1.0,1.0);
-    color.rgb = mix(color.rgb, cor_nevoa, alpha);
+    //color.rgb = mix(color.rgb, cor_nevoa, alpha);
     //color.rgb = color.rgb + alpha*(cor_nevoa - color.rgb);
     //color.rgb = color.rgb*(1-alpha) + vec3(alpha,alpha,alpha);
 
