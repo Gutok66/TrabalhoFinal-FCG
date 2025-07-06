@@ -251,6 +251,8 @@ GLuint g_NumLoadedTextures = 0;
 
 float lastFrame = 0.0f;
 float deltaTime = 0.0f;
+float enemyTime = 0.0f;
+float lastEnemyTime = 0.0f;
 int window_height = 600.0f;
 
 #define PLANE 0
@@ -280,6 +282,44 @@ int window_height = 600.0f;
 #define pol_helmet 24
 #define pol_jaket 25
 #define pol_pants 26
+
+struct Enemy {
+    glm::vec3 position;
+    int health;
+    glm::vec3 p0, p1, p2, p3; // Pontos de controle da curva de Bezier
+    float bezier_t;          // Parâmetro atual na curva (0 a 1)
+    float speed;             // Velocidade de movimento ao longo da curva
+};
+std::vector<Enemy> g_Enemies;
+
+// Função para calcular um ponto na curva de Bezier cúbica
+glm::vec3 CalculateBezierPoint(float t, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
+    float u = 1.0f - t;
+    float tt = t * t;
+    float uu = u * u;
+    float uuu = uu * u;
+    float ttt = tt * t;
+
+    glm::vec3 p = uuu * p0; 
+    p += 3 * uu * t * p1;
+    p += 3 * u * tt * p2;
+    p += ttt * p3;
+
+    return p;
+}
+
+// Função para gerar uma nova curva de Bezier para um inimigo
+void GenerateBezierCurve(Enemy& enemy) {
+    enemy.p0 = enemy.position; // Começa da posição atual
+    // Define um novo destino aleatório dentro de uma área
+    enemy.p3 = glm::vec3(enemy.position.x + ((rand() % 200) - 100) / 20.0f, 0.0f, enemy.position.z +((rand() % 200) - 100) / 20.0f);
+
+    // Gera pontos de controle intermediários para criar uma curva suave
+    enemy.p1 = enemy.p0 + glm::vec3(((rand() % 100) - 50) / 10.0f, 0.0f, ((rand() % 100) - 50) / 10.0f);
+    enemy.p2 = enemy.p3 + glm::vec3(((rand() % 100) - 50) / 10.0f, 0.0f, ((rand() % 100) - 50) / 10.0f);
+
+    enemy.bezier_t = 0.0f; // Reseta o parâmetro da curva
+}
 
 // Simple ray-sphere intersection for trees
 bool RayIntersectsSphere(glm::vec3 ray_origin, glm::vec3 ray_direction, glm::vec3 sphere_center, float sphere_radius, float& hit_distance) {
@@ -442,6 +482,9 @@ int main(int argc, char* argv[])
     ObjModel enemymodel("../../data/Soldier.obj");
     ComputeNormals(&enemymodel);
     BuildTrianglesAndAddToVirtualScene(&enemymodel);
+
+    // Inicializa os inimigos
+    g_Enemies.clear();
 
     if ( argc > 1 )
     {
@@ -640,6 +683,18 @@ int main(int argc, char* argv[])
        // #define CROSSHAIR 11
        // #define PROJECTILE_LINE 12
 
+        enemyTime = currentFrame - lastEnemyTime;
+        if (enemyTime > 5.0f) { // Atualiza inimigos a cada 5 segundos
+            lastEnemyTime = currentFrame;
+            if (g_Enemies.size() < 6) { // Cria 5 inimigos
+                Enemy enemy;
+                enemy.position = glm::vec3(((rand() % 200) - 100) / 5.0f, 0.0f, ((rand() % 200) - 100) / 5.0f);
+                enemy.health = 100;
+                enemy.speed = 0.1f + ((rand() % 100) / 500.0f); // Velocidade aleatória
+                GenerateBezierCurve(enemy);
+                g_Enemies.push_back(enemy);
+            }
+        }
 
         for (const auto& position : g_TreePositions) {
             //auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
@@ -744,24 +799,36 @@ int main(int argc, char* argv[])
         model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
-        // Desenhamos o modelo do inimigo FONTE: COPILOT
-        if(!FirstPerson){
-            for (size_t i = 0; i + 1 < enemymodel.shapes.size(); ++i) { // Skip last shape
-                const auto& shape = enemymodel.shapes[i];
-                /* int material_id = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[0];
-                std::string material_name = (material_id >= 0) ? enemymodel.materials[material_id].name : "";
 
-                // Bind the correct texture
-                if (!material_name.empty() && material_to_texture.count(material_name)) {
-                    GLuint tex_unit = material_to_texture[material_name];
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, tex_unit);
-                } */
+        
+        // Atualiza e renderiza os inimigos
+        for (auto& enemy : g_Enemies) {
+            if (enemy.health <= 0) continue; // Pula inimigos mortos
+            // Atualiza a posição do inimigo ao longo da curva de Bezier
+            enemy.bezier_t += deltaTime * enemy.speed;
+            if (enemy.bezier_t >= 1.0f) {
+                enemy.bezier_t = 0.0f;
+                GenerateBezierCurve(enemy); // Gera uma nova curva quando a atual termina
+            }
+            glm::vec3 new_position = CalculateBezierPoint(enemy.bezier_t, enemy.p0, enemy.p1, enemy.p2, enemy.p3);
 
+            // Calcula a direção do movimento
+            glm::vec3 direction = glm::normalize(new_position - enemy.position);
+            enemy.position = new_position;
+
+            // Calcula o ângulo de rotação para que o inimigo olhe na direção do movimento
+            float angle = atan2(direction.x, direction.z);
+
+            // Renderiza o inimigo na nova posição com a rotação correta
+            model = Matrix_Translate(enemy.position.x, enemy.position.y, enemy.position.z) * Matrix_Rotate_Y(angle);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+
+            for (size_t i = 0; i < enemymodel.shapes.size(); ++i) {
                 glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
-                DrawVirtualObject(shape.name.c_str());
+                DrawVirtualObject(enemymodel.shapes[i].name.c_str());
             }
         }
+        
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,0.0f,0.0f) * Matrix_Scale(20.0f, 1.0f, 20.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
