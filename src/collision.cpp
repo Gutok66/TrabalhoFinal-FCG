@@ -4,8 +4,8 @@
 #include <cmath>
 #include <iostream>
 
-// This tells the compiler that g_TreePositions is defined in another file (main.cpp)
-extern std::vector<glm::vec3> g_TreePositions;
+// This tells the compiler that g_BarricadePositions is defined in another file (main.cpp)
+extern std::vector<glm::vec3> g_BarricadePositions;
 
 // --- Variable Definitions ---
 float Physics::GRAVITY = -9.8f;
@@ -101,7 +101,7 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     }
 
     // --- Check collision with trees ---
-    for (const auto& tree_position : g_TreePositions) {
+    for (const auto& tree_position : g_BarricadePositions) {
         float tree_hit_distance;
         float tree_radius = 2.0f;
         if (Physics::RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {

@@ -219,7 +219,8 @@ bool FirstPerson = false; // Variável que controla se a câmera está em primei
 glm::mat4 character = Matrix_Identity(); // Personagem
 glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
-std::vector<glm::vec3> g_TreePositions;
+std::vector<glm::vec3> g_BarricadePositions;
+std::vector<float> g_BarricadeRotation; // Rotação da barricada
 int Ammo = 30; // Total de munição disponível
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
@@ -474,9 +475,10 @@ int main(int argc, char* argv[])
     ComputeNormals(&player);
     BuildTrianglesAndAddToVirtualScene(&player);
 
-    g_TreePositions.clear();
+    g_BarricadePositions.clear();
     for (int i = 0; i < 20; i++) {
-        g_TreePositions.push_back(glm::vec3(((rand() % 200) - 100) / 5.0f, 0.0f, ((rand() % 200) - 100) / 5.0f));
+        g_BarricadePositions.push_back(glm::vec3(((rand() % 200) - 100) / 5.0f, 0.0f, ((rand() % 200) - 100) / 5.0f));
+        g_BarricadeRotation.push_back(((rand() % 360) - 180) / 180.0f * 3.141592); // Rotação aleatória entre -180 e 180 graus
     }
 
     ObjModel enemymodel("../../data/Soldier.obj");
@@ -696,20 +698,22 @@ int main(int argc, char* argv[])
             }
         }
 
-        for (const auto& position : g_TreePositions) {
-            //auto dist = norm(glm::vec4(tree_position, 1.0f) - glm::vec4(character_position, 1.0f));
-                model = Matrix_Translate(position.x, position.y, position.z)*Matrix_Scale(1.0f, 1.0f, 1.0f);
-                glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
+            const auto& position = g_BarricadePositions[i];
+            float rotation = g_BarricadeRotation[i];
 
-                for (int j = 0; j < 5; j++) {
-                    if (j == 1){
-                        glUniform1i(g_object_id_uniform, BARRICADE);
-                    }
-                    else{
-                        glUniform1i(g_object_id_uniform, METAL);
-                    }
-                    DrawVirtualObject(barricade.shapes[j].name.c_str());
+            model = Matrix_Translate(position.x, position.y, position.z) * Matrix_Rotate_Y(rotation) * Matrix_Scale(1.2f, 1.2f, 1.2f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+
+            for (int j = 0; j < 5; j++) {
+                if (j == 1) {
+                    glUniform1i(g_object_id_uniform, BARRICADE);
                 }
+                else {
+                    glUniform1i(g_object_id_uniform, METAL);
+                }
+                DrawVirtualObject(barricade.shapes[j].name.c_str());
+            }
         }
         
         model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
