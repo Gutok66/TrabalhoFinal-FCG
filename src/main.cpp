@@ -1951,15 +1951,15 @@ void TextRendering_ShowAmmo(GLFWwindow* window)
     if ( !g_ShowInfoText )
         return;
 
-    static char  buffer[20] = "Ammo: ??";
+    static char  buffer[20] = "Ammo: ??/30";
     static int   numchars = 2;
 
-    numchars = snprintf(buffer, 20, "Ammo: %d", Ammo);
+    numchars = snprintf(buffer, 20, "Ammo: %d/30", Ammo);
 
     float lineheight = TextRendering_LineHeight(window);
     float charwidth = TextRendering_CharWidth(window);
 
-    TextRendering_PrintString(window, buffer, 1.0f-20*charwidth, -1.0f+3*lineheight, 2.0f);
+    TextRendering_PrintString(window, buffer, 1.0f-24*charwidth, -1.0f+3*lineheight, 2.0f);
 }
 
 void TextRendering_ShowReload(GLFWwindow* window)

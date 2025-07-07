@@ -27,11 +27,13 @@ const GLchar* const textvertexshader_source = ""
 const GLchar* const textfragmentshader_source = ""
 "#version 330\n"
 "uniform sampler2D tex;\n"
+"uniform vec4 text_color;\n"
 "in vec2 texCoords;\n"
 "out vec4 fragColor;\n"
 "void main()\n"
 "{\n"
-    "fragColor = vec4(0, 0, 0, texture(tex, texCoords).r);\n"
+    "float alpha = texture(tex, texCoords).r;\n"
+    "fragColor = vec4(text_color.rgb, text_color.a * alpha);\n"
 "}\n"
 "\0";
 
@@ -197,6 +199,9 @@ void TextRendering_PrintString(GLFWwindow* window, const std::string &str, float
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         glUseProgram(textprogram_id);
+        GLint color = glGetUniformLocation(textprogram_id, "text_color");
+        glUniform4f(color, 1.0f, 1.0f, 0.0f, 1.0f); // Amarelo
+
         glBindVertexArray(textVAO);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
