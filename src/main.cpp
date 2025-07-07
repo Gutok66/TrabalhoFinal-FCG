@@ -319,6 +319,24 @@ void GenerateBezierCurve(Enemy& enemy) {
     enemy.p1 = enemy.p0 + glm::vec3(((rand() % 100) - 50) / 10.0f, 0.0f, ((rand() % 100) - 50) / 10.0f);
     enemy.p2 = enemy.p3 + glm::vec3(((rand() % 100) - 50) / 10.0f, 0.0f, ((rand() % 100) - 50) / 10.0f);
 
+    // Garante que os pontos estejam dentro dos limites
+    // Clamping individual components is safer than trying to clamp the entire vec3
+    enemy.p0.x = glm::clamp(enemy.p0.x, -19.0f, 19.0f);
+    enemy.p0.y = glm::clamp(enemy.p0.y, 0.0f, 0.0f);
+    enemy.p0.z = glm::clamp(enemy.p0.z, -19.0f, 19.0f);
+    
+    enemy.p1.x = glm::clamp(enemy.p1.x, -19.0f, 19.0f);
+    enemy.p1.y = glm::clamp(enemy.p1.y, 0.0f, 0.0f);
+    enemy.p1.z = glm::clamp(enemy.p1.z, -19.0f, 19.0f);
+    
+    enemy.p2.x = glm::clamp(enemy.p2.x, -19.0f, 19.0f);
+    enemy.p2.y = glm::clamp(enemy.p2.y, 0.0f, 0.0f);
+    enemy.p2.z = glm::clamp(enemy.p2.z, -19.0f, 19.0f);
+    
+    enemy.p3.x = glm::clamp(enemy.p3.x, -19.0f, 19.0f);
+    enemy.p3.y = glm::clamp(enemy.p3.y, 0.0f, 0.0f);
+    enemy.p3.z = glm::clamp(enemy.p3.z, -19.0f, 19.0f);
+    
     enemy.bezier_t = 0.0f; // Reseta o parâmetro da curva
 }
 
@@ -1550,6 +1568,21 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // com o botão esquerdo pressionado.
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
+        if (Ammo > 0)
+        {
+
+            // Call the correct function from our Physics system.
+            // This will add the projectile to the correct list (Physics::Projectiles).
+            Physics::HandleShooting(
+                character_position,
+                g_CameraTheta,
+                g_CameraPhi,
+                g_CameraDistance,
+                FirstPerson
+            );
+            character_position = character_position - glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta))*0.1f; //Recoil
+            Ammo--; // Decrementa munição
+        }
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
     {
@@ -1729,34 +1762,17 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_ShowInfoText = !g_ShowInfoText;
     }
 
-    // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
     {
         Ammo = 30; // Recarrega munição
+    }
+
+    // Se o usuário apertar a tecla f, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
+    if (key == GLFW_KEY_F && action == GLFW_PRESS)
+    {
         LoadShadersFromFiles();
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
-    }
-
-    // Apertar F para atirar
-    // Apertar F para atirar
-    if (key == GLFW_KEY_F && action == GLFW_PRESS)
-    {
-        if (Ammo > 0)
-        {
-
-            // Call the correct function from our Physics system.
-            // This will add the projectile to the correct list (Physics::Projectiles).
-            Physics::HandleShooting(
-                character_position,
-                g_CameraTheta,
-                g_CameraPhi,
-                g_CameraDistance,
-                FirstPerson
-            );
-            character_position = character_position - glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta))*0.1f; //Recoil
-            Ammo--; // Decrementa munição
-        }
     }
 }
 
