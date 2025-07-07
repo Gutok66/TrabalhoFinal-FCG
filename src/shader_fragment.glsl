@@ -87,6 +87,11 @@ uniform sampler2D TextureImage19;
 uniform sampler2D TextureImage20;
 uniform sampler2D TextureImage21;
 
+uniform bool muzzle_flash_active;
+uniform vec3 muzzle_flash_position;
+uniform vec3 muzzle_flash_color;
+uniform float muzzle_flash_intensity;
+
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
 
@@ -508,6 +513,23 @@ void main()
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
+    if (muzzle_flash_active)
+    {
+        // Calculate direction from fragment to muzzle flash
+        vec3 flash_direction = normalize(muzzle_flash_position - position_world.xyz);
+        
+        // Calculate distance for attenuation
+        float flash_distance = length(muzzle_flash_position - position_world.xyz);
+        float attenuation = 1.0 / (1.0 + 0.25 * flash_distance * flash_distance);
+        
+        // Diffuse contribution from muzzle flash
+        float flash_lambert = max(0.0, dot(normal.xyz, flash_direction));
+        vec3 flash_diffuse = muzzle_flash_color * flash_lambert * attenuation * muzzle_flash_intensity;
+        
+        // Add muzzle flash light to the scene
+        ambient.rgb += flash_diffuse;
+    }
+
     color = ambient + diffuse + specular;
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;

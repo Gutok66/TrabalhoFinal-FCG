@@ -54,6 +54,24 @@
 
 std::vector<Enemy> g_Enemies;
 
+struct MuzzleFlash {
+    bool active;
+    float lifetime;
+    float max_lifetime;
+    glm::vec3 position;
+    glm::vec3 color;
+    float intensity;
+};
+
+MuzzleFlash g_MuzzleFlash = {
+    false,              // Inicialmente inativo
+    0.0f,               // Tempo de vida atual (0ms)
+    0.15f,              // Tempo de vida máximo (150ms)
+    glm::vec3(0.0f),    // Posição (será definida ao disparar)
+    glm::vec3(1.0f, 0.7f, 0.3f), // Cor laranja-amarelada
+    3.0f                // Intensidade da luz
+};
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -255,10 +273,15 @@ GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
 // para projetil
 GLint g_projectile_alpha_uniform;
+GLint g_muzzle_flash_active_uniform;
+GLint g_muzzle_flash_position_uniform;
+GLint g_muzzle_flash_color_uniform;
+GLint g_muzzle_flash_intensity_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
+float camera_height = 1.7f;     // Altura da câmera em relação ao chão
 float lastFrame = 0.0f;
 float deltaTime = 0.0f;
 float enemyTime = 0.0f;
@@ -575,8 +598,6 @@ int main(int argc, char* argv[])
         glUseProgram(g_GpuProgramID);
 
 
-
-        float camera_height = 1.7f;     // Altura da câmera em relação ao chão
         float camera_side_offset = 0.5f; // Distância lateral
         float target_distance = 100.0f; // Distância até o ponto alvo (para onde a câmera está olhando)
 
@@ -598,6 +619,25 @@ int main(int argc, char* argv[])
 
         Physics::ApplyPlayerPhysics(character_position);
 
+        if (g_MuzzleFlash.active) {
+            g_MuzzleFlash.lifetime += deltaTime;
+            
+            // Calculate fade factor (1.0 to 0.0)
+            float fadeFactor = 1.0f - (g_MuzzleFlash.lifetime / g_MuzzleFlash.max_lifetime);
+            
+            if (g_MuzzleFlash.lifetime >= g_MuzzleFlash.max_lifetime) {
+                g_MuzzleFlash.active = false;
+            }
+            
+            // Pass values to shader
+            glUniform1i(g_muzzle_flash_active_uniform, g_MuzzleFlash.active ? 1 : 0);
+            glUniform3fv(g_muzzle_flash_position_uniform, 1, glm::value_ptr(g_MuzzleFlash.position));
+            glUniform3fv(g_muzzle_flash_color_uniform, 1, glm::value_ptr(g_MuzzleFlash.color));
+            glUniform1f(g_muzzle_flash_intensity_uniform, g_MuzzleFlash.intensity * fadeFactor);
+        } else {
+            // If not active, tell shader to ignore muzzle flash
+            glUniform1i(g_muzzle_flash_active_uniform, 0);
+        }
         
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
@@ -804,6 +844,31 @@ int main(int argc, char* argv[])
             DrawVirtualObject("WZ96_Beryl_0");
             glUniform1i(g_object_id_uniform, pol_jaket);
             DrawVirtualObject("pol_jaket_0");
+        }
+
+        if (g_MuzzleFlash.active) {
+            // Calculate the size based on remaining lifetime
+            float fadeSize = 1.0f - (g_MuzzleFlash.lifetime / g_MuzzleFlash.max_lifetime);
+            float flashSize = 0.2f * fadeSize;
+            
+            // Position the flash at the muzzle position
+            model = Matrix_Translate(g_MuzzleFlash.position.x, g_MuzzleFlash.position.y, g_MuzzleFlash.position.z)
+                * Matrix_Scale(flashSize, flashSize, flashSize)
+                * Matrix_Rotate_Y(g_CameraTheta); // Face camera
+            
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            
+            // Draw a simple quad for the muzzle flash
+            // You would need to create a special VAO for this
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive blending for glow effect
+            
+            // Draw your muzzle flash sprite here
+            // For example: DrawMuzzleFlashQuad();
+            
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_DEPTH_TEST);
         }
 
         model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
@@ -1121,6 +1186,10 @@ void LoadShadersFromFiles()
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
     g_projectile_alpha_uniform = glGetUniformLocation(g_GpuProgramID, "projectile_alpha");
+    g_muzzle_flash_active_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_active");
+    g_muzzle_flash_position_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_position");
+    g_muzzle_flash_color_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_color");
+    g_muzzle_flash_intensity_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_intensity");
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
@@ -1556,18 +1625,10 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
-        // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
-        // posição atual do cursor nas variáveis g_LastCursorPosX e
-        // g_LastCursorPosY.  Também, setamos a variável
-        // g_LeftMouseButtonPressed como true, para saber que o usuário está
-        // com o botão esquerdo pressionado.
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
         if (Ammo > 0)
         {
-
-            // Call the correct function from our Physics system.
-            // This will add the projectile to the correct list (Physics::Projectiles).
             Physics::HandleShooting(
                 character_position,
                 g_CameraTheta,
@@ -1578,6 +1639,33 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
             );
             g_RecoilTimer = RECOIL_DURATION;
             Ammo--; // Decrementa munição
+            
+            // Ativa o efeito de flash do cano da arma
+            g_MuzzleFlash.active = true;
+            g_MuzzleFlash.lifetime = 0.0f;
+            
+            // Calcula a posição do cano da arma
+            glm::vec3 gunOffset = glm::vec3(-0.05f, 1.55f, 0.9f); // Ajuste esses valores conforme necessário
+            glm::mat4 gunTransform = Matrix_Identity();
+            
+            if (FirstPerson) {
+                // Posição da arma em primeira pessoa
+                gunTransform = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) 
+                            * Matrix_Translate(character_position.x, character_position.y, character_position.z) 
+                            * Matrix_Rotate_Y(g_CameraTheta) 
+                            * Matrix_Translate(0.0f, camera_height, 0.0f) 
+                            * Matrix_Rotate_X(g_CameraPhi) 
+                            * Matrix_Translate(0.0f, -camera_height, 0.0f);
+            } else {
+                // Posição da arma em terceira pessoa
+                gunTransform = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) 
+                            * Matrix_Translate(character_position.x, character_position.y, character_position.z) 
+                            * Matrix_Rotate_Y(g_CameraTheta);
+            }
+
+            // Transforma gun offset para o espaço mundial
+            glm::vec4 worldMuzzlePos = gunTransform * glm::vec4(gunOffset, 1.0f);
+            g_MuzzleFlash.position = glm::vec3(worldMuzzlePos);
         }
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
