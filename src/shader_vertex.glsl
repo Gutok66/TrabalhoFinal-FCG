@@ -11,6 +11,13 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+// Identificador que define qual objeto está sendo desenhado no momento
+// Precisamos disso para saber quando aplicar o modelo de Gouraud
+uniform int object_id;
+
+// Definição do objeto barricada para referência
+#define BARRICADE 7
+
 // Atributos de vértice que serão gerados como saída ("out") pelo Vertex Shader.
 // ** Estes serão interpolados pelo rasterizador! ** gerando, assim, valores
 // para cada fragmento, os quais serão recebidos como entrada pelo Fragment
@@ -19,6 +26,12 @@ out vec4 position_world;
 out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
+
+// Para o modelo de iluminação de Gouraud
+// Estas cores serão calculadas por vértice e interpoladas pelo rasterizador
+out vec3 gouraud_diffuse;
+out vec3 gouraud_specular;
+out vec3 gouraud_ambient;
 
 void main()
 {
@@ -63,5 +76,52 @@ void main()
 
     // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
     texcoords = texture_coefficients;
+    
+    // Inicialização das variáveis de saída para iluminação de Gouraud
+    gouraud_diffuse = vec3(0.0, 0.0, 0.0);
+    gouraud_specular = vec3(0.0, 0.0, 0.0);
+    gouraud_ambient = vec3(0.0, 0.0, 0.0);
+    
+    // Se o objeto atual for a barricada, aplicamos o modelo de iluminação de Gouraud
+    if (object_id == BARRICADE)
+    {
+        // Obtemos a posição da câmera utilizando a inversa da matriz view
+        vec4 origin = vec4(0.0, 0.0, 0.0, 1.0);
+        vec4 camera_position = inverse(view) * origin;
+        
+        // Normal do vértice normalizada
+        vec4 n = normalize(normal);
+        
+        // Vetor que define o sentido da fonte de luz em relação ao vértice atual.
+        vec4 l = normalize(vec4(1.0, 1.0, 0.0, 0.0));
+        
+        // Vetor que define o sentido da câmera em relação ao vértice atual.
+        vec4 v = normalize(camera_position - position_world);
+        
+        // Vetor que define o sentido da reflexão especular ideal.
+        vec4 r = -l + 2.0*n*dot(n,l);
+        
+        // Textura e propriedades do material
+        float U = texcoords.x;
+        float V = texcoords.y;
+        
+        // Para o modelo de iluminação de Gouraud, precisamos acessar a textura
+        // No vertex shader não temos acesso direto às texturas como no fragment shader
+        // A cor base será passada no fragment shader usando a TextureImage8
+        
+        // Definimos cores base para o cálculo da iluminação
+        // Serão multiplicadas pela textura no fragment shader
+        vec3 Ks0 = vec3(0.595455, 0.595455, 0.595455); // Cor especular
+        
+        // Equação de Iluminação
+        float lambert = max(0.0, dot(n, l));
+        float Ns = 49.607449; // Exponente especular
+        
+        // Calculamos as componentes da iluminação
+        // Usaremos vec3(1.0) como base, e multiplicaremos pela textura no fragment shader
+        gouraud_specular = Ks0 * pow(max(0.0, dot(r, v)), Ns);
+        gouraud_diffuse = vec3(lambert); // Apenas o fator lambert, a cor virá da textura
+        gouraud_ambient = vec3(0.1);     // Fator ambiente, será multiplicado pela textura
+    }
 }
 

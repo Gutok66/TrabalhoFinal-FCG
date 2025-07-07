@@ -13,6 +13,12 @@ in vec4 position_model;
 // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
 in vec2 texcoords;
 
+// Para o modelo de iluminação de Gouraud
+// Cores calculadas no vertex shader e interpoladas pelo rasterizador
+in vec3 gouraud_diffuse;
+in vec3 gouraud_specular;
+in vec3 gouraud_ambient;
+
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
 uniform mat4 view;
@@ -114,6 +120,8 @@ void main()
 
     // Vetor que define o sentido da reflexão especular ideal.
     vec4 r = -l + 2.0*n*dot(n,l);
+
+    vec4 h = normalize(l + v);  // Half-vector (método de Blinn-Phong)
 
     // Coordenadas de textura U e V
     float U = 0.0;
@@ -279,18 +287,18 @@ void main()
     }
     else if ( object_id == BARRICADE)
     {
+        // Modelo de iluminação de Gouraud com textura
+        // Obtemos a textura e aplicamos aos fatores calculados no vertex shader
         U = texcoords.x;
         V = texcoords.y;
-
-        vec3 Kd0 = texture(TextureImage8, vec2(U,V)).rgb;; // Quase sem cor
-        vec3 Ks0 = vec3(0.595455, 0.595455, 0.595455); // Cor especular
-        // Equação de Iluminação
-        float lambert = max(0,dot(n,l));
-        float Ns = 49.607449; // Exponente especular
-
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
-        diffuse.rgb = Kd0 * lambert;
-        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+        
+        // Obtendo a cor da textura
+        vec3 textureColor = texture(TextureImage8, vec2(U,V)).rgb;
+        
+        // Aplicamos a textura aos componentes de iluminação calculados no vertex shader
+        ambient.rgb = textureColor * gouraud_ambient;    // Aplicando textura à componente ambiente
+        diffuse.rgb = textureColor * gouraud_diffuse;    // Aplicando textura à componente difusa
+        specular.rgb = gouraud_specular;                 // Componente especular permanece como está
     }
     else if ( object_id == RGZ89)
     {
@@ -303,7 +311,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -318,7 +326,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -333,7 +341,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -346,7 +354,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -361,7 +369,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -376,7 +384,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -391,7 +399,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -406,7 +414,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -421,8 +429,9 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1;
     }
     else if ( object_id == pol_hand)
     {
@@ -435,7 +444,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -450,7 +459,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -465,7 +474,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10%
     }
@@ -480,7 +489,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
@@ -495,7 +504,7 @@ void main()
         float lambert = max(0,dot(n,l));
         float Ns = 250; // Exponente especular
 
-        specular.rgb = Ks0 * pow(max(0, dot(r, v)), Ns); // Cor especular
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
