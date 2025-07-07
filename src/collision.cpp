@@ -25,6 +25,10 @@ void Physics::Initialize() {
     Physics::IsCharacterGrounded = true;
 }
 
+// --- Hitbox Definitions ---
+Physics::Hitbox Physics::ENEMY_BODY_HITBOX = {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
+Physics::Hitbox Physics::ENEMY_HEAD_HITBOX = {glm::vec3(0.0f, 1.6f, 0.0f), glm::vec3(0.4f, 0.4f, 0.4f), 2.0f};
+
 void Physics::ApplyPlayerPhysics(GLFWwindow* window, glm::vec3& character_position, float deltaTime) {
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && Physics::IsCharacterGrounded) {
         Physics::CharacterVerticalVelocity = Physics::JUMP_FORCE;
@@ -54,7 +58,8 @@ void Physics::UpdateProjectiles(float currentTime) {
 
 void Physics::HandleShooting(const glm::vec3& character_position,
                              float cameraTheta, float cameraPhi,
-                             float cameraDistance, bool firstPerson) {
+                             float cameraDistance, bool firstPerson,
+                             std::vector<Enemy>& enemies) {
     glm::vec3 character_front = glm::vec3(cos(cameraPhi) * sin(cameraTheta), -sin(cameraPhi), cos(cameraPhi) * cos(cameraTheta));
     glm::vec3 character_right = glm::vec3(-cos(cameraTheta), 0.0f, sin(cameraTheta));
 
@@ -98,6 +103,28 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     // Front Wall (z=20)
     if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, 0, WorldBounds::MaxZ), glm::vec3(0, 0, -1), hit_distance)) {
         closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+
+    // --- Check collision with enemies ---
+    for (auto& enemy : enemies) {
+        float body_hit_distance;
+        if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_BODY_HITBOX.offset, ENEMY_BODY_HITBOX.size, enemy.model_matrix, body_hit_distance)) {
+            if (body_hit_distance < closest_hit_distance) {
+                closest_hit_distance = body_hit_distance;
+                // You can add logic here to know you hit the body and apply 40 damage
+                enemy.health -= 40;
+                printf("Hit enemy body! Remaining health: %d\n", enemy.health);
+            }
+        }
+
+        float head_hit_distance;
+        if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_HEAD_HITBOX.offset, ENEMY_HEAD_HITBOX.size, enemy.model_matrix, head_hit_distance)) {
+            if (head_hit_distance < closest_hit_distance) {
+                closest_hit_distance = head_hit_distance;
+                enemy.health -= 80;
+                printf("Hit enemy head! Remaining health: %d\n", enemy.health);
+            }
+        }
     }
 
     // --- Check collision with trees ---
@@ -174,6 +201,61 @@ bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
     // We only care about intersections in front of the ray
     if (t > 0.0f) {
         hit_distance = t;
+        return true;
+    }
+
+    return false;
+}
+
+bool Physics::RayIntersectsOBB(glm::vec3 ray_origin, glm::vec3 ray_direction, 
+                                glm::vec3 box_center_offset, glm::vec3 box_size, glm::mat4 model_matrix, 
+                                float& hit_distance) {
+    glm::mat4 inv_model_matrix = glm::inverse(model_matrix);
+
+    glm::vec4 ray_origin_local_4 = inv_model_matrix * glm::vec4(ray_origin, 1.0f);
+    glm::vec3 ray_origin_local = glm::vec3(ray_origin_local_4);
+
+    glm::vec4 ray_direction_local_4 = inv_model_matrix * glm::vec4(ray_direction, 0.0f);
+    glm::vec3 ray_direction_local = glm::normalize(glm::vec3(ray_direction_local_4));
+
+    glm::vec3 min_bound = box_center_offset - box_size / 2.0f;
+    glm::vec3 max_bound = box_center_offset + box_size / 2.0f;
+
+    float tmin = (min_bound.x - ray_origin_local.x) / ray_direction_local.x;
+    float tmax = (max_bound.x - ray_origin_local.x) / ray_direction_local.x;
+
+    if (tmin > tmax) std::swap(tmin, tmax);
+
+    float tymin = (min_bound.y - ray_origin_local.y) / ray_direction_local.y;
+    float tymax = (max_bound.y - ray_origin_local.y) / ray_direction_local.y;
+
+    if (tymin > tymax) std::swap(tymin, tymax);
+
+    if ((tmin > tymax) || (tymin > tmax))
+        return false;
+
+    if (tymin > tmin)
+        tmin = tymin;
+
+    if (tymax < tmax)
+        tmax = tymax;
+
+    float tzmin = (min_bound.z - ray_origin_local.z) / ray_direction_local.z;
+    float tzmax = (max_bound.z - ray_origin_local.z) / ray_direction_local.z;
+
+    if (tzmin > tzmax) std::swap(tzmin, tzmax);
+
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return false;
+
+    if (tzmin > tmin)
+        tmin = tzmin;
+
+    if (tzmax < tmax)
+        tmax = tzmax;
+
+    if (tmin > 0.0f) {
+        hit_distance = tmin;
         return true;
     }
 

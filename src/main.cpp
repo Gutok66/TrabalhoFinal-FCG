@@ -50,6 +50,9 @@
 
 // Header da colisão
 #include "collision.h"
+#include "enemy.h"
+
+std::vector<Enemy> g_Enemies;
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -284,6 +287,7 @@ int window_height = 600.0f;
 #define pol_jaket 25
 #define pol_pants 26
 
+/*
 struct Enemy {
     glm::vec3 position;
     int health;
@@ -292,6 +296,7 @@ struct Enemy {
     float speed;             // Velocidade de movimento ao longo da curva
 };
 std::vector<Enemy> g_Enemies;
+*/
 
 // Função para calcular um ponto na curva de Bezier cúbica
 glm::vec3 CalculateBezierPoint(float t, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
@@ -338,45 +343,6 @@ void GenerateBezierCurve(Enemy& enemy) {
     enemy.p3.z = glm::clamp(enemy.p3.z, -19.0f, 19.0f);
     
     enemy.bezier_t = 0.0f; // Reseta o parâmetro da curva
-}
-
-// Simple ray-sphere intersection for trees
-bool RayIntersectsSphere(glm::vec3 ray_origin, glm::vec3 ray_direction, glm::vec3 sphere_center, float sphere_radius, float& hit_distance) {
-    glm::vec3 oc = ray_origin - sphere_center;
-    float a = dot(ray_direction, ray_direction);
-    float b = 2.0f * dot(oc, ray_direction);
-    float c = dot(oc, oc) - sphere_radius * sphere_radius;
-    float discriminant = b * b - 4 * a * c;
-    
-    if (discriminant < 0) {
-        return false;
-    }
-    
-    float t1 = (-b - sqrt(discriminant)) / (2.0f * a);
-    float t2 = (-b + sqrt(discriminant)) / (2.0f * a);
-    
-    if (t1 > 0) {
-        hit_distance = t1;
-        return true;
-    } else if (t2 > 0) {
-        hit_distance = t2;
-        return true;
-    }
-    
-    return false;
-}
-
-// Ray-plane intersection for ground
-bool RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction, float& hit_distance) {
-    // Ground is at y = 0
-    if (abs(ray_direction.y) < 0.001f) return false; // Ray is parallel to ground
-    
-    float t = -ray_origin.y / ray_direction.y;
-    if (t > 0) {
-        hit_distance = t;
-        return true;
-    }
-    return false;
 }
 
 int main(int argc, char* argv[])
@@ -602,7 +568,6 @@ int main(int argc, char* argv[])
         // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
         // os shaders de vértice e fragmentos).
         glUseProgram(g_GpuProgramID);
-
 
 
 
@@ -840,9 +805,11 @@ int main(int argc, char* argv[])
 
             // Calcula o ângulo de rotação para que o inimigo olhe na direção do movimento
             float angle = atan2(direction.x, direction.z);
+            enemy.rotation_y = glm::degrees(angle);
 
             // Renderiza o inimigo na nova posição com a rotação correta
             model = Matrix_Translate(enemy.position.x, enemy.position.y, enemy.position.z) * Matrix_Rotate_Y(angle);
+            enemy.model_matrix = model;
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
             for (size_t i = 0; i < enemymodel.shapes.size(); ++i) {
@@ -881,6 +848,11 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, ROOF);
         DrawVirtualObject("the_plane");
+
+        // Remove enemies with health <= 0
+        g_Enemies.erase(std::remove_if(g_Enemies.begin(), g_Enemies.end(), [](const Enemy& enemy) {
+            return enemy.health <= 0;
+        }), g_Enemies.end());
 
         // 1. Update all projectiles (this handles the logic of removing old ones)
         float currentTime = (float)glfwGetTime();
@@ -1578,7 +1550,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
                 g_CameraTheta,
                 g_CameraPhi,
                 g_CameraDistance,
-                FirstPerson
+                FirstPerson,
+                g_Enemies
             );
             character_position = character_position - glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta))*0.1f; //Recoil
             Ammo--; // Decrementa munição

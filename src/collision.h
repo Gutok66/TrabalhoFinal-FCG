@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <GLFW/glfw3.h>
+#include "enemy.h"
 
 struct Projectile {
     glm::vec3 start_position;
@@ -35,12 +36,23 @@ namespace Physics {
     extern float CharacterVerticalVelocity;
     extern bool IsCharacterGrounded;
 
+    // --- Enemy Configuration ---
+    struct Hitbox {
+        glm::vec3 offset;
+        glm::vec3 size;
+        float damage_multiplier;
+    };
+
+    extern Hitbox ENEMY_BODY_HITBOX;
+    extern Hitbox ENEMY_HEAD_HITBOX;
+
     // --- Functions ---
     void Initialize();
     void ApplyPlayerPhysics(GLFWwindow* window, glm::vec3& character_position, float deltaTime);
     void HandleShooting(const glm::vec3& character_position,
                        float cameraTheta, float cameraPhi,
-                       float cameraDistance, bool firstPerson);
+                       float cameraDistance, bool firstPerson,
+                       std::vector<Enemy>& enemies);
     void UpdateProjectiles(float currentTime);
 
     // --- Collision Detection ---
@@ -52,7 +64,11 @@ namespace Physics {
                            
     bool RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
                         glm::vec3 plane_point, glm::vec3 plane_normal,
-                        float& hit_distance);                       
+                        float& hit_distance);
+
+    bool RayIntersectsOBB(glm::vec3 ray_origin, glm::vec3 ray_direction,
+                        glm::vec3 box_center, glm::vec3 box_size, glm::mat4 model_matrix,
+                        float& hit_distance);
 }
 
 #endif // COLLISION_H
