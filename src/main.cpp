@@ -229,6 +229,12 @@ int Ammo = 30; // Total de munição disponível
 float g_ForearmAngleZ = 0.0f;
 float g_ForearmAngleX = 0.0f;
 
+// Variáveis de recuo
+glm::vec3 g_RecoilOffset = glm::vec3(0.0f);
+float g_RecoilTimer = 0.0f;
+const float RECOIL_DURATION = 0.3f;
+const float RECOIL_STRENGTH = 0.1f;
+
 // Variáveis que controlam translação do torso
 float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
@@ -493,7 +499,6 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-
     // Escolher tamanho da crosshair
     float crosshair_length_pixels = 30.0f;
     float crosshair_thickness_pixels = 4.0f;
@@ -668,6 +673,17 @@ int main(int argc, char* argv[])
        // #define CROSSHAIR 11
        // #define PROJECTILE_LINE 12
 
+       if (g_RecoilTimer > 0.0f) {
+            g_RecoilTimer -= deltaTime;
+
+            float t = g_RecoilTimer / RECOIL_DURATION;
+            float recoil_factor = t * t;
+            g_RecoilOffset = -g_CameraFront * RECOIL_STRENGTH * recoil_factor;
+
+        } else {
+            g_RecoilOffset = glm::vec3(0.0f);
+        }
+
         enemyTime = currentFrame - lastEnemyTime;
         if (enemyTime > 5.0f) { // Atualiza inimigos a cada 5 segundos
             lastEnemyTime = currentFrame;
@@ -698,12 +714,11 @@ int main(int argc, char* argv[])
                 DrawVirtualObject(barricade.shapes[j].name.c_str());
             }
         }
-        
-        model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
         if (!FirstPerson){
             for (size_t j = 0; j < player.shapes.size(); ++j) {
+                model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+                glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
                 switch(j){
                     case 0:
                         glUniform1i(g_object_id_uniform, material);
@@ -721,6 +736,8 @@ int main(int argc, char* argv[])
                         glUniform1i(g_object_id_uniform, pol_helmet);
                         break;
                     case 5:
+                        model = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) * Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+                        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
                         glUniform1i(g_object_id_uniform, WZ96_Beryl);
                         break;
                     case 6:
@@ -736,15 +753,21 @@ int main(int argc, char* argv[])
                         glUniform1i(g_object_id_uniform, magb);
                         break;
                     case 10:
+                        model = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) * Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+                        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
                         glUniform1i(g_object_id_uniform, pol_bproof);
                         break;
                     case 11:
+                        model = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) * Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+                        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
                         glUniform1i(g_object_id_uniform, pol_hand);
                         break;
                     case 12:
                         glUniform1i(g_object_id_uniform, pol_head);
                         break;
                     case 13:
+                        model = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) * Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta);
+                        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
                         glUniform1i(g_object_id_uniform, pol_jaket);
                         break;
                     case 14:
@@ -772,7 +795,7 @@ int main(int argc, char* argv[])
             }
         }
         else{
-            model = Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta) * Matrix_Translate(0.0f, camera_height, 0.0f) * Matrix_Rotate_X(g_CameraPhi) * Matrix_Translate(0.0f, -camera_height, 0.0f);
+            model = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) * Matrix_Translate(character_position.x, character_position.y, character_position.z) * Matrix_Rotate_Y(g_CameraTheta) * Matrix_Translate(0.0f, camera_height, 0.0f) * Matrix_Rotate_X(g_CameraPhi) * Matrix_Translate(0.0f, -camera_height, 0.0f);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             // Renderizar o personagem em primeira pessoa
             glUniform1i(g_object_id_uniform, pol_hand);
@@ -1553,7 +1576,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
                 FirstPerson,
                 g_Enemies
             );
-            character_position = character_position - glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta))*0.1f; //Recoil
+            g_RecoilTimer = RECOIL_DURATION;
             Ammo--; // Decrementa munição
         }
     }
