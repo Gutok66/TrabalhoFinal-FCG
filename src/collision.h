@@ -48,7 +48,7 @@ namespace Physics {
 
     // --- Functions ---
     void Initialize();
-    void ApplyPlayerPhysics(GLFWwindow* window, glm::vec3& character_position, float deltaTime);
+    void ApplyPlayerPhysics(glm::vec3& character_position);
     void HandleShooting(const glm::vec3& character_position,
                        float cameraTheta, float cameraPhi,
                        float cameraDistance, bool firstPerson,

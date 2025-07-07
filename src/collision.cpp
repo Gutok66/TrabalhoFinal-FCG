@@ -29,20 +29,16 @@ void Physics::Initialize() {
 Physics::Hitbox Physics::ENEMY_BODY_HITBOX = {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
 Physics::Hitbox Physics::ENEMY_HEAD_HITBOX = {glm::vec3(0.0f, 1.6f, 0.0f), glm::vec3(0.4f, 0.4f, 0.4f), 2.0f};
 
-void Physics::ApplyPlayerPhysics(GLFWwindow* window, glm::vec3& character_position, float deltaTime) {
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && Physics::IsCharacterGrounded) {
-        Physics::CharacterVerticalVelocity = Physics::JUMP_FORCE;
-        Physics::IsCharacterGrounded = false;
-    }
+void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {
 
-    Physics::CharacterVerticalVelocity += Physics::GRAVITY * deltaTime;
-    character_position.y += Physics::CharacterVerticalVelocity * deltaTime;
+    // --- WALL COLLISION ---
+    // Clamp X coordinate
+    if (character_position.x > WorldBounds::MaxX) character_position.x = WorldBounds::MaxX;
+    if (character_position.x < WorldBounds::MinX) character_position.x = WorldBounds::MinX;
 
-    if (character_position.y <= 0.0f) {
-        character_position.y = 0.0f;
-        Physics::CharacterVerticalVelocity = 0.0f;
-        Physics::IsCharacterGrounded = true;
-    }
+    // Clamp Z coordinate
+    if (character_position.z > WorldBounds::MaxZ) character_position.z = WorldBounds::MaxZ;
+    if (character_position.z < WorldBounds::MinZ) character_position.z = WorldBounds::MinZ;
 }
 
 void Physics::UpdateProjectiles(float currentTime) {

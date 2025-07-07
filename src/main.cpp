@@ -596,9 +596,9 @@ int main(int argc, char* argv[])
         lastFrame = currentFrame;
         ProcessInput(window, character_position, deltaTime);
 
-        
-        
+        Physics::ApplyPlayerPhysics(character_position);
 
+        
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::vec4 g_CameraFront = glm::vec4(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta), 0.0f);
