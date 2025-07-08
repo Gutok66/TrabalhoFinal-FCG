@@ -14,6 +14,16 @@ struct Enemy {
     float rotation_y;        // Rotation around the Y axis
 };
 
+struct BloodSplatter {
+    bool active;
+    float lifetime;
+    float max_lifetime;
+    glm::vec3 position;
+    float size;
+    float rotation;
+};
+
+extern std::vector<BloodSplatter> g_BloodSplatters;
 extern std::vector<Enemy> g_Enemies;
 
 #endif // ENEMY_H
