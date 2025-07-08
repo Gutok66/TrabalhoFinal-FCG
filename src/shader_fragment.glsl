@@ -58,6 +58,7 @@ uniform float projectile_alpha;
 #define pol_jaket 25
 #define pol_pants 26
 #define MUZZLE_FLASH 27
+#define BLOOD_SPLATTER 28
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -88,6 +89,7 @@ uniform sampler2D TextureImage19;
 uniform sampler2D TextureImage20;
 uniform sampler2D TextureImage21;
 uniform sampler2D TextureImage22;
+uniform sampler2D TextureImage23;
 
 uniform bool muzzle_flash_active;
 uniform vec3 muzzle_flash_position;
@@ -536,6 +538,23 @@ void main()
         diffuse = vec4(texture_color.rgb * muzzle_flash_intensity, texture_color.a);
         ambient = vec4(0.0, 0.0, 0.0, 1.0); // Ambient light is zero for muzzle flash
         specular = vec4(0.0, 0.0, 0.0, 0.0); // No specular for muzzle flash
+    }
+    else if( object_id == BLOOD_SPLATTER )
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+        
+        // Sample the texture
+        vec4 texture_color = texture(TextureImage23, vec2(U,V));
+        
+        // Discard transparent pixels
+        if(texture_color.r < 0.8)
+            discard;
+        
+        // Calculate fade based on lifetime (handled in CPU code by alpha value)
+        diffuse = vec4(texture_color.rgb, projectile_alpha); // Yellow with fading alpha;
+        ambient = vec4(0.0, 0.0, 0.0, 0.0);
+        specular = vec4(0.0, 0.0, 0.0, 0.0);
     }
     if (muzzle_flash_active)
     {

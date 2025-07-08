@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 
+extern std::vector<BloodSplatter> g_BloodSplatters;
 // This tells the compiler that g_BarricadePositions is defined in another file (main.cpp)
 extern std::vector<glm::vec3> g_BarricadePositions;
 
@@ -110,6 +111,16 @@ void Physics::HandleShooting(const glm::vec3& character_position,
                 // You can add logic here to know you hit the body and apply 40 damage
                 enemy.health -= 40;
                 printf("Hit enemy body! Remaining health: %d\n", enemy.health);
+                // Add blood splatter effect
+                BloodSplatter splatter;
+                splatter.active = true;
+                splatter.lifetime = 0.0f;
+                splatter.max_lifetime = 1.0f;
+                // Calculate hit position
+                splatter.position = projectile_start + projectile_direction * body_hit_distance;
+                splatter.size = 0.5f;
+                splatter.rotation = ((float)rand() / RAND_MAX) * 2.0f * 3.14159f; // Random rotation
+                g_BloodSplatters.push_back(splatter);
             }
         }
 
@@ -119,6 +130,16 @@ void Physics::HandleShooting(const glm::vec3& character_position,
                 closest_hit_distance = head_hit_distance;
                 enemy.health -= 80;
                 printf("Hit enemy head! Remaining health: %d\n", enemy.health);
+                // Add blood splatter effect - larger for headshots!
+                BloodSplatter splatter;
+                splatter.active = true;
+                splatter.lifetime = 0.0f;
+                splatter.max_lifetime = 1.0f;
+                // Calculate hit position
+                splatter.position = projectile_start + projectile_direction * head_hit_distance;
+                splatter.size = 0.8f; // Bigger splatter for headshots
+                splatter.rotation = ((float)rand() / RAND_MAX) * 2.0f * 3.14159f; // Random rotation
+                g_BloodSplatters.push_back(splatter);
             }
         }
     }

@@ -72,6 +72,10 @@ MuzzleFlash g_MuzzleFlash = {
     3.0f                // Intensidade da luz
 };
 
+
+// Vector to store all active blood splatters
+std::vector<BloodSplatter> g_BloodSplatters;
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -316,6 +320,7 @@ int window_height = 600.0f;
 #define pol_jaket 25
 #define pol_pants 26
 #define MUZZLE_FLASH 27
+#define BLOOD_SPLATTER 28
 
 /*
 struct Enemy {
@@ -476,6 +481,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/textures/Image_32.png"); // TextureImage20
     LoadTextureImage("../../data/textures/Image_35.png"); // TextureImage21
     LoadTextureImage("../../data/textures/muzzleflash.png"); // TextureImage22
+    LoadTextureImage("../../data/textures/pngegg.png"); // TextureImage23
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
     ObjModel planemodel("../../data/plane.obj");
@@ -931,7 +937,7 @@ int main(int argc, char* argv[])
                 // Instead of aligning with camera phi and theta, we want it to face forward
                 // in the direction the gun is pointing
                 flashModel = Matrix_Translate(flashPos.x, flashPos.y, flashPos.z)
-                        * Matrix_Rotate_Y(g_CameraTheta - 2.6f)  // Rotate to face camera direction
+                        * Matrix_Rotate_Y(g_CameraTheta - 2.8f)  // Rotate to face camera direction
                         * Matrix_Rotate_X(-g_CameraPhi)  // Rotate to face forward
                         * Matrix_Rotate_Z(3.1415f)  // Rotate 90 degrees to face forward
                         * Matrix_Scale(-0.1f * fadeFactor, -0.1f * fadeFactor, 0.1f * fadeFactor);
@@ -964,6 +970,101 @@ int main(int argc, char* argv[])
             glEnable(GL_DEPTH_TEST);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_TRUE);
+        }
+
+        // Update and render blood splatters
+        for (auto it = g_BloodSplatters.begin(); it != g_BloodSplatters.end(); ) {
+            it->lifetime += deltaTime;
+            
+            if (it->lifetime >= it->max_lifetime) {
+                // Remove expired blood splatters
+                it = g_BloodSplatters.erase(it);
+            } else {
+                // Calculate fade and scale factors
+                float lifePercent = it->lifetime / it->max_lifetime;
+                float fadeAlpha = 1.0f - lifePercent;
+                float currentSize = it->size * (1.0f - lifePercent * 0.3f); // Slightly shrink over time
+                
+                // Calculate billboard matrix for the blood splatter
+                // (Similar to muzzle flash, but oriented to face camera)
+                
+                // Get camera position
+                glm::vec3 cameraPos;
+                if (FirstPerson) {
+                    cameraPos = character_position + glm::vec3(0.0f, camera_height, 0.0f);
+                } else {
+                    cameraPos = camera_position;
+                }
+                
+                // Calculate vectors for billboard matrix
+                glm::vec3 look = glm::normalize(cameraPos - it->position);
+                glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), look));
+                glm::vec3 up = glm::normalize(glm::cross(look, right));
+                
+                // Create model matrix for blood splatter
+                glm::mat4 bloodModel = glm::translate(glm::mat4(1.0f), it->position);
+                bloodModel[0] = glm::vec4(right * currentSize, 0.0f);
+                bloodModel[1] = glm::vec4(up * currentSize, 0.0f);
+                bloodModel[2] = glm::vec4(look * 0.1f, 0.0f);
+                
+                // Apply rotation
+                bloodModel = glm::rotate(bloodModel, it->rotation, look);
+                
+                glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
+                
+                // Render blood splatter with transparency
+                glDepthMask(GL_FALSE);
+                glDisable(GL_DEPTH_TEST);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                
+                // Set blood splatter texture and color
+                glUniform1i(g_object_id_uniform, BLOOD_SPLATTER); // We'll define this constant
+                
+                // Use quad rendering technique similar to muzzle flash
+                // Define vertices for a quad
+                float half_size = currentSize / 2.0f;
+                float vertices[] = {
+                    -half_size, -half_size, 0.0f, 0.0f, 0.0f,  // bottom-left: UV = 0,0
+                    half_size, -half_size, 0.0f, 1.0f, 0.0f,   // bottom-right: UV = 1,0
+                    half_size, half_size, 0.0f, 1.0f, 1.0f,    // top-right: UV = 1,1
+                    -half_size, half_size, 0.0f, 0.0f, 1.0f    // top-left: UV = 0,1
+                };
+                
+                GLuint VAO, VBO;
+                glGenVertexArrays(1, &VAO);
+                glGenBuffers(1, &VBO);
+                
+                glBindVertexArray(VAO);
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+                
+                // Position attribute
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+                // Texture coords attribute
+                glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+                glEnableVertexAttribArray(2);
+                
+                // Activate blood texture (TextureImage23)
+                //glActiveTexture(GL_TEXTURE0 + 23);
+                //glBindTexture(GL_TEXTURE_2D, 23);
+                
+                // Draw the quad
+                GLuint indices[] = {0, 1, 2, 0, 2, 3};
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, indices);
+                
+                // Clean up
+                glDeleteVertexArrays(1, &VAO);
+                glDeleteBuffers(1, &VBO);
+                
+                // Restore state
+                glEnable(GL_DEPTH_TEST);
+                glDepthMask(GL_TRUE);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                
+                ++it; // Move to next splatter
+            }
         }
 
         // Remove enemies with health <= 0
@@ -1245,6 +1346,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage20"), 20);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage21"), 21);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage22"), 22);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage23"), 23);
     glUseProgram(0);
 }
 
