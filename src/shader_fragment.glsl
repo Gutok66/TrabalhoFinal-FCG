@@ -26,6 +26,7 @@ uniform mat4 projection;
 
 // variavel para projetil
 uniform float projectile_alpha;
+uniform float blood_alpha;
 
 
 
@@ -552,7 +553,7 @@ void main()
             discard;
         
         // Calculate fade based on lifetime (handled in CPU code by alpha value)
-        diffuse = vec4(texture_color.rgb, projectile_alpha); // Yellow with fading alpha;
+        diffuse = vec4(texture_color.rgb, blood_alpha); // Yellow with fading alpha;
         ambient = vec4(0.0, 0.0, 0.0, 0.0);
         specular = vec4(0.0, 0.0, 0.0, 0.0);
     }

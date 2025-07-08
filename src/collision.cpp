@@ -5,11 +5,8 @@
 #include <cmath>
 #include <iostream>
 
-<<<<<<< HEAD
 
-=======
 extern std::vector<BloodSplatter> g_BloodSplatters;
->>>>>>> 5a28647ffe92392812d6ce06210a9e1328d00c08
 // This tells the compiler that g_BarricadePositions is defined in another file (main.cpp)
 extern std::vector<glm::vec3> g_BarricadePositions;
 extern std::vector<float> g_BarricadeRotation;
@@ -121,7 +118,7 @@ void Physics::HandleShooting(const glm::vec3& character_position,
                 BloodSplatter splatter;
                 splatter.active = true;
                 splatter.lifetime = 0.0f;
-                splatter.max_lifetime = 1.0f;
+                splatter.max_lifetime = 0.5f;
                 // Calculate hit position
                 splatter.position = projectile_start + projectile_direction * body_hit_distance;
                 splatter.size = 0.5f;
@@ -140,7 +137,7 @@ void Physics::HandleShooting(const glm::vec3& character_position,
                 BloodSplatter splatter;
                 splatter.active = true;
                 splatter.lifetime = 0.0f;
-                splatter.max_lifetime = 1.0f;
+                splatter.max_lifetime = 0.5f;
                 // Calculate hit position
                 splatter.position = projectile_start + projectile_direction * head_hit_distance;
                 splatter.size = 0.8f; // Bigger splatter for headshots

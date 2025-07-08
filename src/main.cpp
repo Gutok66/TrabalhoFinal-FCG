@@ -5,7 +5,7 @@
 //    INF01047 Fundamentos de Computação Gráfica
 //               Prof. Eduardo Gastal
 //
-//                   LABORATÓRIO 5
+//                   TRABALHO FINAL
 //
 
 // Arquivos "headers" padrões de C podem ser incluídos em um
@@ -73,7 +73,7 @@ MuzzleFlash g_MuzzleFlash = {
 };
 
 
-// Vector to store all active blood splatters
+// Vetor para armazenar todos os sangues ativos
 std::vector<BloodSplatter> g_BloodSplatters;
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
@@ -167,10 +167,10 @@ void TextRendering_PrintMatrixVectorProductDivW(GLFWwindow* window, glm::mat4 M,
 // Funções abaixo renderizam como texto na janela OpenGL algumas matrizes e
 // outras informações do programa. Definidas após main().
 void TextRendering_ShowModelViewProjection(GLFWwindow* window, glm::mat4 projection, glm::mat4 view, glm::mat4 model, glm::vec4 p_model);
-void TextRendering_ShowEulerAngles(GLFWwindow* window);
 void TextRendering_ShowProjection(GLFWwindow* window);
 void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
 void TextRendering_ShowAmmo(GLFWwindow* window);
+void TextRendering_ShowKills(GLFWwindow* window);
 void TextRendering_ShowReload(GLFWwindow* window);
 
 // Funções callback para comunicação com o sistema operacional e interação do
@@ -198,15 +198,15 @@ struct SceneObject
 
 
 std::vector<Projectile> g_Projectiles;
-const float PROJECTILE_LIFETIME = 1.0f; // seconds
+const float PROJECTILE_LIFETIME = 1.0f; 
 const float PROJECTILE_MAX_DISTANCE = 100.0f;
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 // variáveis para gravidade e pulo
 float g_CharacterVerticalVelocity = 0.0f;
 bool g_IsCharacterGrounded = true;
-const float GRAVITY = -9.8f; // Earth gravity in m/s²
-const float JUMP_FORCE = 5.0f; // Adjust for desired jump height
+const float GRAVITY = -9.8f; // Gravidade da Terra em m/s²
+const float JUMP_FORCE = 5.0f; // Altura do pulo
 
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
@@ -219,11 +219,6 @@ std::stack<glm::mat4>  g_MatrixStack;
 
 // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
 float g_ScreenRatio = 1.0f;
-
-// Ângulos de Euler que controlam a rotação de um dos cubos da cena virtual
-float g_AngleX = 0.0f;
-float g_AngleY = 0.0f;
-float g_AngleZ = 0.0f;
 
 // "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
 // pressionado no momento atual. Veja função MouseButtonCallback().
@@ -247,6 +242,7 @@ glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 0.0f);
 std::vector<glm::vec3> g_BarricadePositions;
 std::vector<float> g_BarricadeRotation; // Rotação da barricada
 int Ammo = 30; // Total de munição disponível
+int Kills = 0; // Total de Eliminações
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
 float g_ForearmAngleX = 0.0f;
@@ -277,6 +273,7 @@ GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
 // para projetil
 GLint g_projectile_alpha_uniform;
+GLint g_blood_alpha_uniform;
 GLint g_muzzle_flash_active_uniform;
 GLint g_muzzle_flash_position_uniform;
 GLint g_muzzle_flash_color_uniform;
@@ -881,7 +878,10 @@ int main(int argc, char* argv[])
         
         // Atualiza e renderiza os inimigos
         for (auto& enemy : g_Enemies) {
-            if (enemy.health <= 0) continue; // Pula inimigos mortos
+            if (enemy.health <= 0){
+                Kills++;
+                continue; // Pula inimigos mortos
+            }    
             // Atualiza a posição do inimigo ao longo da curva de Bezier
             enemy.bezier_t += deltaTime * enemy.speed;
             if (enemy.bezier_t >= 1.0f) {
@@ -891,7 +891,7 @@ int main(int argc, char* argv[])
             glm::vec3 new_position = CalculateBezierPoint(enemy.bezier_t, enemy.p0, enemy.p1, enemy.p2, enemy.p3);
 
             // Calcula a direção do movimento
-            glm::vec3 direction = glm::normalize(new_position - enemy.position);
+            glm::vec4 direction = glm::vec4(new_position - enemy.position, 0.0f)/norm(glm::vec4(new_position - enemy.position, 0.0f));
             enemy.position = new_position;
 
             // Calcula o ângulo de rotação para que o inimigo olhe na direção do movimento
@@ -941,104 +941,82 @@ int main(int argc, char* argv[])
         DrawVirtualObject("the_plane");
 
         if (g_MuzzleFlash.active) {
-            // Calculate fade factor
+
             float fadeFactor = 1.0f - (g_MuzzleFlash.lifetime / g_MuzzleFlash.max_lifetime);
             
-            // Calculate rotation to face camera
-            glm::vec3 flashPos = g_MuzzleFlash.position;
             glm::mat4 flashModel;
             
             if (FirstPerson) {
-                // First person muzzle flash needs special rotation to face forward
-                // Instead of aligning with camera phi and theta, we want it to face forward
-                // in the direction the gun is pointing
-                flashModel = Matrix_Translate(flashPos.x, flashPos.y, flashPos.z)
-                        * Matrix_Rotate_Y(g_CameraTheta - 2.8f)  // Rotate to face camera direction
-                        * Matrix_Rotate_X(-g_CameraPhi)  // Rotate to face forward
-                        * Matrix_Rotate_Z(3.1415f)  // Rotate 90 degrees to face forward
+                flashModel = Matrix_Translate(g_MuzzleFlash.position.x, g_MuzzleFlash.position.y, g_MuzzleFlash.position.z)
+                        * Matrix_Rotate_Y(g_CameraTheta - 2.8f)
+                        * Matrix_Rotate_X(-g_CameraPhi)
+                        * Matrix_Rotate_Z(3.1415f)
                         * Matrix_Scale(-0.1f * fadeFactor, -0.1f * fadeFactor, 0.1f * fadeFactor);
             } else {
                 // Third person muzzle flash
-                flashModel = Matrix_Translate(flashPos.x, flashPos.y, flashPos.z)
+                flashModel = Matrix_Translate(g_MuzzleFlash.position.x, g_MuzzleFlash.position.y, g_MuzzleFlash.position.z)
                         * Matrix_Rotate_Y(g_CameraTheta)
-                        * Matrix_Rotate_X(-3.14159f)  // Same rotation here for consistency
+                        * Matrix_Rotate_X(-3.14159f)
                         * Matrix_Scale(0.1f * fadeFactor, 0.2f * fadeFactor, 0.1f * fadeFactor);
             }
             
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(flashModel));
-            
-            // Disable depth writing and enable additive blending for glow effect
+
+            // Desabilita depth writing e habilita additive blending para glow effect
             glDepthMask(GL_FALSE);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
             
-            // Make sure it's always visible
             glDisable(GL_DEPTH_TEST);
-            
-            // Set correct texture unit for muzzle flash
-            //glActiveTexture(GL_TEXTURE0 + 22);
-            //glBindTexture(GL_TEXTURE_2D, 22);
             
             glUniform1i(g_object_id_uniform, MUZZLE_FLASH);
             DrawVirtualObject("cube11_cube11_auv");
             
-            // Restore state
             glEnable(GL_DEPTH_TEST);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_TRUE);
         }
 
-        // Update and render blood splatters
-        for (auto it = g_BloodSplatters.begin(); it != g_BloodSplatters.end(); ) {
-            it->lifetime += deltaTime;
+        for (auto particle = g_BloodSplatters.begin(); particle != g_BloodSplatters.end(); ) {
+            particle->lifetime += deltaTime;
             
-            if (it->lifetime >= it->max_lifetime) {
-                // Remove expired blood splatters
-                it = g_BloodSplatters.erase(it);
+            if (particle->lifetime >= particle->max_lifetime) {
+                particle = g_BloodSplatters.erase(particle);
             } else {
-                // Calculate fade and scale factors
-                float lifePercent = it->lifetime / it->max_lifetime;
+                float lifePercent = particle->lifetime / particle->max_lifetime;
                 float fadeAlpha = 1.0f - lifePercent;
-                float currentSize = it->size * (1.0f - lifePercent * 0.3f); // Slightly shrink over time
+                float currentSize = particle->size * (0.1f + pow(lifePercent, 0.5f) * 1.0f);
                 
-                // Calculate billboard matrix for the blood splatter
-                // (Similar to muzzle flash, but oriented to face camera)
+                glm::vec4 look = glm::vec4(camera_position - particle->position, 0.0f)/norm(glm::vec4(camera_position - particle->position, 0.0f));
+                glm::vec4 right = (crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look))/norm(crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look));
+                glm::vec4 up = (crossproduct(look, right))/norm(crossproduct(look, right));
+
+                // Aplica rotação aleatória ao plano do splatter
+                float c = cos(particle->rotation);
+                float s = sin(particle->rotation);
+
+                // Rotaciona right e up em torno do vetor look
+                glm::vec4 right_rot = right * c + up * s;
+                glm::vec4 up_rot = up * c - right * s;
+
+                glm::mat4 bloodModel = Matrix_Translate(particle->position.x, particle->position.y, particle->position.z);
+                bloodModel[0] = glm::vec4(right_rot * currentSize);
+                bloodModel[1] = glm::vec4(up_rot * currentSize);
+                bloodModel[2] = glm::vec4(look * 0.1f);                
                 
-                // Get camera position
-                glm::vec3 cameraPos;
-                if (FirstPerson) {
-                    cameraPos = character_position + glm::vec3(0.0f, camera_height, 0.0f);
-                } else {
-                    cameraPos = camera_position;
-                }
-                
-                // Calculate vectors for billboard matrix
-                glm::vec3 look = glm::normalize(cameraPos - it->position);
-                glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), look));
-                glm::vec3 up = glm::normalize(glm::cross(look, right));
-                
-                // Create model matrix for blood splatter
-                glm::mat4 bloodModel = glm::translate(glm::mat4(1.0f), it->position);
-                bloodModel[0] = glm::vec4(right * currentSize, 0.0f);
-                bloodModel[1] = glm::vec4(up * currentSize, 0.0f);
-                bloodModel[2] = glm::vec4(look * 0.1f, 0.0f);
-                
-                // Apply rotation
-                bloodModel = glm::rotate(bloodModel, it->rotation, look);
-                
+
                 glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
                 
-                // Render blood splatter with transparency
+                // Renderiza com transparência
                 glDepthMask(GL_FALSE);
                 glDisable(GL_DEPTH_TEST);
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 
-                // Set blood splatter texture and color
-                glUniform1i(g_object_id_uniform, BLOOD_SPLATTER); // We'll define this constant
-                
-                // Use quad rendering technique similar to muzzle flash
-                // Define vertices for a quad
+                glUniform1i(g_object_id_uniform, BLOOD_SPLATTER);
+                glUniform1f(g_blood_alpha_uniform, fadeAlpha);
+
+                // Similar a muzzle flash
                 float half_size = currentSize / 2.0f;
                 float vertices[] = {
                     -half_size, -half_size, 0.0f, 0.0f, 0.0f,  // bottom-left: UV = 0,0
@@ -1055,31 +1033,24 @@ int main(int argc, char* argv[])
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
                 
-                // Position attribute
+                // Atributo position
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
                 glEnableVertexAttribArray(0);
-                // Texture coords attribute
+                // Atributo de coordenadas de textura
                 glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
                 glEnableVertexAttribArray(2);
-                
-                // Activate blood texture (TextureImage23)
-                //glActiveTexture(GL_TEXTURE0 + 23);
-                //glBindTexture(GL_TEXTURE_2D, 23);
-                
-                // Draw the quad
+            
                 GLuint indices[] = {0, 1, 2, 0, 2, 3};
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, indices);
                 
-                // Clean up
                 glDeleteVertexArrays(1, &VAO);
                 glDeleteBuffers(1, &VBO);
                 
-                // Restore state
                 glEnable(GL_DEPTH_TEST);
                 glDepthMask(GL_TRUE);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 
-                ++it; // Move to next splatter
+                particle++;
             }
         }
 
@@ -1088,27 +1059,24 @@ int main(int argc, char* argv[])
             return enemy.health <= 0;
         }), g_Enemies.end());
 
-        // 1. Update all projectiles (this handles the logic of removing old ones)
+        // Atualiza todos os projéteis
         float currentTime = (float)glfwGetTime();
         Physics::UpdateProjectiles(currentTime);
 
 
-        // 2. Render all active projectiles that remain
+        // Renderiza todos os projéteis
         for (const auto& projectile : Physics::Projectiles)
         {
-            // Calculate fade alpha based on age
             float age = currentTime - projectile.creation_time;
             float fade_alpha = 1.0f - (age / Physics::PROJECTILE_LIFETIME);
 
-            // Render projectile as a thick line
             glDisable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             
-            // Set line width to make it thicker
             glLineWidth(5.0f);
-            
-            // Create line vertices using the 'projectile' variable
+
+            // Cria vertices de linha usando a variável 'projectile'
             float line_vertices[] = {
                 projectile.start_position.x, projectile.start_position.y, projectile.start_position.z, 1.0f,
                 projectile.end_position.x,   projectile.end_position.y,   projectile.end_position.z,   1.0f
@@ -1125,22 +1093,18 @@ int main(int argc, char* argv[])
             glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
             glEnableVertexAttribArray(0);
             
-            // Set uniforms
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
             glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
             glUniform1i(g_object_id_uniform, PROJECTILE_LINE);
             
-            // Pass fade alpha to shader
             glUniform1f(g_projectile_alpha_uniform, fade_alpha);
             
-            // Draw line
             glDrawArrays(GL_LINES, 0, 2);
             
-            // Cleanup
             glDeleteBuffers(1, &lineVBO);
             glDeleteVertexArrays(1, &lineVAO);
-            glLineWidth(1.0f); // Reset line width
+            glLineWidth(1.0f);
             
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
@@ -1169,6 +1133,8 @@ int main(int argc, char* argv[])
 
 
         TextRendering_ShowAmmo(window);
+
+        TextRendering_ShowKills(window);
 
         TextRendering_ShowReload(window);
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -1332,6 +1298,7 @@ void LoadShadersFromFiles()
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
     g_projectile_alpha_uniform = glGetUniformLocation(g_GpuProgramID, "projectile_alpha");
+    g_blood_alpha_uniform = glGetUniformLocation(g_GpuProgramID, "blood_alpha");
     g_muzzle_flash_active_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_active");
     g_muzzle_flash_position_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_position");
     g_muzzle_flash_color_uniform = glGetUniformLocation(g_GpuProgramID, "muzzle_flash_color");
@@ -1951,26 +1918,9 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     float delta = 3.141592 / 16; // 22.5 graus, em radianos.
 
-    if (key == GLFW_KEY_X && action == GLFW_PRESS)
-    {
-        g_AngleX += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
-    }
-
-    if (key == GLFW_KEY_Y && action == GLFW_PRESS)
-    {
-        g_AngleY += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
-    }
-    if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-    {
-        g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
-    }
-
     // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
-        g_AngleX = 0.0f;
-        g_AngleY = 0.0f;
-        g_AngleZ = 0.0f;
         g_ForearmAngleX = 0.0f;
         g_ForearmAngleZ = 0.0f;
         g_TorsoPositionX = 0.0f;
@@ -2117,21 +2067,6 @@ void TextRendering_ShowModelViewProjection(
     TextRendering_PrintMatrixVectorProductMoreDigits(window, viewport_mapping, p_ndc, -1.0f, 1.0f-26*pad, 1.0f);
 }
 
-// Escrevemos na tela os ângulos de Euler definidos nas variáveis globais
-// g_AngleX, g_AngleY, e g_AngleZ.
-void TextRendering_ShowEulerAngles(GLFWwindow* window)
-{
-    if ( !g_ShowInfoText )
-        return;
-
-    float pad = TextRendering_LineHeight(window);
-
-    char buffer[80];
-    snprintf(buffer, 80, "Euler Angles rotation matrix = Z(%.2f)*Y(%.2f)*X(%.2f)\n", g_AngleZ, g_AngleY, g_AngleX);
-
-    TextRendering_PrintString(window, buffer, -1.0f+pad/10, -1.0f+2*pad/10, 1.0f);
-}
-
 // Escrevemos na tela qual matriz de projeção está sendo utilizada.
 void TextRendering_ShowProjection(GLFWwindow* window)
 {
@@ -2197,6 +2132,22 @@ void TextRendering_ShowAmmo(GLFWwindow* window)
     float charwidth = TextRendering_CharWidth(window);
 
     TextRendering_PrintString(window, buffer, 1.0f-24*charwidth, -1.0f+3*lineheight, 2.0f);
+}
+
+void TextRendering_ShowKills(GLFWwindow* window)
+{
+    if ( !g_ShowInfoText )
+        return;
+
+    static char  buffer[20] = "Eliminations: ??";
+    static int   numchars = 2;
+
+    numchars = snprintf(buffer, 20, "Eliminations: %d", Kills);
+
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+
+    TextRendering_PrintString(window, buffer, 0.0f-15*charwidth, 1.0f-5*lineheight, 2.0f);
 }
 
 void TextRendering_ShowReload(GLFWwindow* window)
