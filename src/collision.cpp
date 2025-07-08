@@ -1,11 +1,14 @@
 #include "collision.h"
+#include "matrices.h"
 
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 
+
 // This tells the compiler that g_BarricadePositions is defined in another file (main.cpp)
 extern std::vector<glm::vec3> g_BarricadePositions;
+extern std::vector<float> g_BarricadeRotation;
 
 // --- Variable Definitions ---
 float Physics::GRAVITY = -9.8f;
@@ -124,11 +127,30 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     }
 
     // --- Check collision with trees ---
-    for (const auto& tree_position : g_BarricadePositions) {
+    /*for (const auto& tree_position : g_BarricadePositions) {
         float tree_hit_distance;
         float tree_radius = 2.0f;
         if (Physics::RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {
             closest_hit_distance = std::min(closest_hit_distance, tree_hit_distance);
+        }
+    }*/
+    // collision com barricade
+    glm::vec3 barricade_bbox_min = glm::vec3(-1.0000, -1.0000, -1.0000); 
+    glm::vec3 barricade_bbox_max = glm::vec3(2.8668, 1.0000, 1.0000); 
+
+    glm::vec3 box_size = barricade_bbox_max - barricade_bbox_min;
+    glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
+
+    for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
+        // Reconstruct the model matrix for the barricade, just like in main.cpp
+        glm::mat4 model_matrix = 
+            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) * Matrix_Rotate_Y(g_BarricadeRotation[i]) * Matrix_Scale(1.2f, 1.2f, 1.2f);
+
+        float barricade_hit_distance;
+        if (Physics::RayIntersectsOBB(projectile_start, projectile_direction, box_center_offset, box_size, model_matrix, barricade_hit_distance)) {
+            if (barricade_hit_distance < closest_hit_distance) {
+                closest_hit_distance = barricade_hit_distance;
+            }
         }
     }
 

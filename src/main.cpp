@@ -484,6 +484,22 @@ int main(int argc, char* argv[])
     ComputeNormals(&barricade);
     BuildTrianglesAndAddToVirtualScene(&barricade);
 
+    // --- ADD THIS TEMPORARY CODE ---
+    glm::vec3 total_bbox_min(std::numeric_limits<float>::max());
+    glm::vec3 total_bbox_max(std::numeric_limits<float>::min());
+
+    // The barricade model has multiple shapes, so we combine their bounding boxes
+    for (const auto& shape : barricade.shapes) {
+        // We need to access the scene object created from the shape
+        const auto& scene_obj = g_VirtualScene[shape.name];
+        total_bbox_min = glm::min(total_bbox_min, scene_obj.bbox_min);
+        total_bbox_max = glm::max(total_bbox_max, scene_obj.bbox_max);
+    }
+    printf("\n--- BARRICADE BOUNDING BOX ---\n");
+    printf("BBox Min: (%.4f, %.4f, %.4f)\n", total_bbox_min.x, total_bbox_min.y, total_bbox_min.z);
+    printf("BBox Max: (%.4f, %.4f, %.4f)\n", total_bbox_max.x, total_bbox_max.y, total_bbox_max.z);
+    printf("----------------------------\n\n");
+
     ObjModel player("../../data/character.obj");
     ComputeNormals(&player);
     BuildTrianglesAndAddToVirtualScene(&player);
