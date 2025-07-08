@@ -10,6 +10,9 @@ extern std::vector<BloodSplatter> g_BloodSplatters;
 // This tells the compiler that g_BarricadePositions is defined in another file (main.cpp)
 extern std::vector<glm::vec3> g_BarricadePositions;
 extern std::vector<float> g_BarricadeRotation;
+glm::vec3 barricade_bbox_min;
+glm::vec3 barricade_bbox_max;
+
 
 // --- Variable Definitions ---
 float Physics::GRAVITY = -9.8f;
@@ -30,8 +33,9 @@ void Physics::Initialize() {
 }
 
 // --- Hitbox Definitions ---
-Physics::Hitbox Physics::ENEMY_BODY_HITBOX = {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
-Physics::Hitbox Physics::ENEMY_HEAD_HITBOX = {glm::vec3(0.0f, 1.6f, 0.0f), glm::vec3(0.4f, 0.4f, 0.4f), 2.0f};
+Physics::Hitbox Physics::ENEMY_LEGS_HITBOX; //= {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
+Physics::Hitbox Physics::ENEMY_BODY_HITBOX; //= {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
+Physics::Hitbox Physics::ENEMY_HEAD_HITBOX; //= {glm::vec3(0.0f, 1.6f, 0.0f), glm::vec3(0.4f, 0.4f, 0.4f), 2.0f};
 
 void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {
 
@@ -99,8 +103,8 @@ void Physics::HandleShooting(const glm::vec3& character_position,
         closest_hit_distance = std::min(closest_hit_distance, hit_distance);
     }
 
-    glm::vec3 barricade_bbox_min = glm::vec3(-1.0000, -1.0000, -1.0000); 
-    glm::vec3 barricade_bbox_max = glm::vec3(2.8668, 1.0000, 1.0000); 
+    //barricade_bbox_min = glm::vec3(-1.0000, -1.0000, -1.0000); 
+    //barricade_bbox_max = glm::vec3(2.8668, 1.0000, 1.0000); 
 
     glm::vec3 box_size = barricade_bbox_max - barricade_bbox_min;
     glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
@@ -121,6 +125,43 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     // --- Check collision with enemies ---
     for (auto& enemy : enemies) {
         float body_hit_distance;
+        if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_BODY_HITBOX.offset, ENEMY_BODY_HITBOX.size, enemy.model_matrix, body_hit_distance)) {
+            if (body_hit_distance < closest_hit_distance) {
+                closest_hit_distance = body_hit_distance;
+                // You can add logic here to know you hit the body and apply 40 damage
+                enemy.health -= 40;
+                printf("Hit enemy body! Remaining health: %d\n", enemy.health);
+                // Add blood splatter effect
+                BloodSplatter splatter;
+                splatter.active = true;
+                splatter.lifetime = 0.0f;
+                splatter.max_lifetime = 0.5f;
+                // Calculate hit position
+                splatter.position = projectile_start + projectile_direction * body_hit_distance;
+                splatter.size = 0.5f;
+                splatter.rotation = ((float)rand() / RAND_MAX) * 2.0f * 3.14159f; // Random rotation
+                g_BloodSplatters.push_back(splatter);
+            }
+        }
+        float pants_hit_distance;
+        if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_LEGS_HITBOX.offset, ENEMY_LEGS_HITBOX.size, enemy.model_matrix, pants_hit_distance)) {
+            if (pants_hit_distance < closest_hit_distance) {
+                closest_hit_distance = pants_hit_distance;
+                // You can add logic here to know you hit the legs and apply 20 damage
+                enemy.health -= 20;
+                printf("Hit enemy legs! Remaining health: %d\n", enemy.health);
+                // Add blood splatter effect
+                BloodSplatter splatter;
+                splatter.active = true;
+                splatter.lifetime = 0.0f;
+                splatter.max_lifetime = 0.5f;
+                // Calculate hit position
+                splatter.position = projectile_start + projectile_direction * pants_hit_distance;
+                splatter.size = 0.5f;
+                splatter.rotation = ((float)rand() / RAND_MAX) * 2.0f * 3.14159f; // Random rotation
+                g_BloodSplatters.push_back(splatter);
+            }
+        }
         if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_BODY_HITBOX.offset, ENEMY_BODY_HITBOX.size, enemy.model_matrix, body_hit_distance)) {
             if (body_hit_distance < closest_hit_distance) {
                 closest_hit_distance = body_hit_distance;
@@ -177,7 +218,7 @@ void Physics::HandleShooting(const glm::vec3& character_position,
         printf("First person barrel position: (%.2f, %.2f, %.2f)\n", new_projectile.start_position.x, new_projectile.start_position.y, new_projectile.start_position.z);
     } else {
         // Offset do cano em terceira pessoa (ajuste conforme necessário)
-        glm::vec3 barrel_offset = glm::vec3(-0.04f, 1.53f, 1.0f); // esquerda, altura do ombro, frente
+        glm::vec3 barrel_offset = glm::vec3(-0.045f, 1.53f, 1.0f); // esquerda, altura do ombro, frente
 
         // Calcula yaw e pitch a partir do camera front
         float yaw = atan2(g_CameraFront.x, g_CameraFront.z);

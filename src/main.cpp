@@ -251,6 +251,7 @@ int Kills = 0; // Total de Eliminações
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
 float g_ForearmAngleX = 0.0f;
+bool ShowHitBoxes = false;
 
 // Variáveis de recuo
 glm::vec3 g_RecoilOffset = glm::vec3(0.0f);
@@ -283,6 +284,8 @@ GLint g_muzzle_flash_active_uniform;
 GLint g_muzzle_flash_position_uniform;
 GLint g_muzzle_flash_color_uniform;
 GLint g_muzzle_flash_intensity_uniform;
+extern glm::vec3 barricade_bbox_min;
+extern glm::vec3 barricade_bbox_max;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -498,16 +501,13 @@ int main(int argc, char* argv[])
     glm::vec3 total_bbox_min(std::numeric_limits<float>::max());
     glm::vec3 total_bbox_max(std::numeric_limits<float>::min());
 
-    // The barricade model has multiple shapes, so we combine their bounding boxes
-    for (const auto& shape : barricade.shapes) {
-        // We need to access the scene object created from the shape
-        const auto& scene_obj = g_VirtualScene[shape.name];
-        total_bbox_min = glm::min(total_bbox_min, scene_obj.bbox_min);
-        total_bbox_max = glm::max(total_bbox_max, scene_obj.bbox_max);
-    }
+    const auto& scene_obj = g_VirtualScene[barricade.shapes[1].name];
+    barricade_bbox_min = scene_obj.bbox_min;
+    barricade_bbox_max = scene_obj.bbox_max;
+
     printf("\n--- BARRICADE BOUNDING BOX ---\n");
-    printf("BBox Min: (%.4f, %.4f, %.4f)\n", total_bbox_min.x, total_bbox_min.y, total_bbox_min.z);
-    printf("BBox Max: (%.4f, %.4f, %.4f)\n", total_bbox_max.x, total_bbox_max.y, total_bbox_max.z);
+    printf("BBox Min: (%.4f, %.4f, %.4f)\n", barricade_bbox_min.x, barricade_bbox_min.y, barricade_bbox_min.z);
+    printf("BBox Max: (%.4f, %.4f, %.4f)\n", barricade_bbox_max.x, barricade_bbox_max.y, barricade_bbox_max.z);
     printf("----------------------------\n\n");
 
     ObjModel player("../../data/character.obj");
@@ -523,6 +523,19 @@ int main(int argc, char* argv[])
     ObjModel enemymodel("../../data/Soldier.obj");
     ComputeNormals(&enemymodel);
     BuildTrianglesAndAddToVirtualScene(&enemymodel);
+
+    const auto& head_obj = g_VirtualScene[enemymodel.shapes[0].name];
+    const auto& body_obj = g_VirtualScene[enemymodel.shapes[3].name];
+    const auto& legs_obj = g_VirtualScene[enemymodel.shapes[4].name];
+    
+    Physics::ENEMY_HEAD_HITBOX.offset = (head_obj.bbox_min + head_obj.bbox_max) * 0.5f;
+    Physics::ENEMY_HEAD_HITBOX.size   = head_obj.bbox_max - head_obj.bbox_min;
+
+    Physics::ENEMY_BODY_HITBOX.offset = (body_obj.bbox_min + body_obj.bbox_max) * 0.5f;
+    Physics::ENEMY_BODY_HITBOX.size   = body_obj.bbox_max - body_obj.bbox_min;
+
+    Physics::ENEMY_LEGS_HITBOX.offset = (legs_obj.bbox_min + legs_obj.bbox_max) * 0.5f;
+    Physics::ENEMY_LEGS_HITBOX.size   = legs_obj.bbox_max - legs_obj.bbox_min;
 
     ObjModel muzzleFlashModel("../../data/muzzleflash.obj");
     ComputeNormals(&muzzleFlashModel);
@@ -784,8 +797,8 @@ int main(int argc, char* argv[])
                 }
                 DrawVirtualObject(barricade.shapes[j].name.c_str());
             }
-             const auto& scene_obj = g_VirtualScene[barricade.shapes[1].name];
-            DrawBoundingBox(scene_obj.bbox_min, scene_obj.bbox_max, model, view, projection);
+            if (ShowHitBoxes)
+                DrawBoundingBox(barricade_bbox_min, barricade_bbox_max, model, view, projection);
         }
 
         if (!FirstPerson){
@@ -914,6 +927,18 @@ int main(int argc, char* argv[])
             for (size_t i = 0; i < enemymodel.shapes.size(); ++i) {
                 glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
                 DrawVirtualObject(enemymodel.shapes[i].name.c_str());
+            }
+            // Print the hitbox bounding boxes defined in collision.cpp
+            if (ShowHitBoxes) {
+                DrawBoundingBox(Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+                            Physics::ENEMY_LEGS_HITBOX.offset + Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+                            model, view, projection);
+                DrawBoundingBox(Physics::ENEMY_BODY_HITBOX.offset - Physics::ENEMY_BODY_HITBOX.size * 0.5f,
+                            Physics::ENEMY_BODY_HITBOX.offset + Physics::ENEMY_BODY_HITBOX.size * 0.5f,
+                            model, view, projection);
+                DrawBoundingBox(Physics::ENEMY_HEAD_HITBOX.offset - Physics::ENEMY_HEAD_HITBOX.size * 0.5f,
+                            Physics::ENEMY_HEAD_HITBOX.offset + Physics::ENEMY_HEAD_HITBOX.size * 0.5f,
+                            model, view, projection);
             }
         }
         
@@ -1858,8 +1883,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     g_CameraPhi   += 0.01f*dy;
 
     // Clamp phi angle to prevent camera flipping
-    float phimax = glm::radians(85.0f);
-    float phimin = glm::radians(-85.0f);
+    float phimax = glm::radians(75.0f);
+    float phimin = glm::radians(-75.0f);
     g_CameraPhi = glm::clamp(g_CameraPhi, phimin, phimax);
 
     // Update last cursor position
@@ -1969,6 +1994,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
     }
+
+    if (key == GLFW_KEY_Z && action == GLFW_PRESS)
+    {
+        ShowHitBoxes = !ShowHitBoxes; // Alterna entre mostrar e ocultar as hitboxes
+    }
+
 }
 
 // Definimos o callback para impressão de erros da GLFW no terminal

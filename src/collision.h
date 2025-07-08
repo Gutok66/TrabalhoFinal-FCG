@@ -43,6 +43,7 @@ namespace Physics {
         float damage_multiplier;
     };
 
+    extern Hitbox ENEMY_LEGS_HITBOX;
     extern Hitbox ENEMY_BODY_HITBOX;
     extern Hitbox ENEMY_HEAD_HITBOX;
 
