@@ -57,6 +57,7 @@ uniform float projectile_alpha;
 #define pol_helmet 24
 #define pol_jaket 25
 #define pol_pants 26
+#define MUZZLE_FLASH 27
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -86,6 +87,7 @@ uniform sampler2D TextureImage18;
 uniform sampler2D TextureImage19;
 uniform sampler2D TextureImage20;
 uniform sampler2D TextureImage21;
+uniform sampler2D TextureImage22;
 
 uniform bool muzzle_flash_active;
 uniform vec3 muzzle_flash_position;
@@ -512,6 +514,28 @@ void main()
         specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
         diffuse.rgb = Kd0 * lambert;
         ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
+    }
+    else if( object_id == MUZZLE_FLASH)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+
+        float scale = 0.9;
+        float offsetU = (1.0 - scale) * 0.5;
+        float offsetV = (1.0 - scale) * 0.3;
+        
+        // Scale and center
+        U = offsetU + U * scale;
+        V = offsetV + V * scale;
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        vec4 texture_color = texture(TextureImage22, vec2(U,V));
+        // Adjust alpha based on intensity
+        if(texture_color.r < 0.1)
+                discard;
+
+        diffuse = vec4(texture_color.rgb * muzzle_flash_intensity, texture_color.a);
+        ambient = vec4(0.0, 0.0, 0.0, 1.0); // Ambient light is zero for muzzle flash
+        specular = vec4(0.0, 0.0, 0.0, 0.0); // No specular for muzzle flash
     }
     if (muzzle_flash_active)
     {

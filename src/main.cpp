@@ -66,7 +66,7 @@ struct MuzzleFlash {
 MuzzleFlash g_MuzzleFlash = {
     false,              // Inicialmente inativo
     0.0f,               // Tempo de vida atual (0ms)
-    0.15f,              // Tempo de vida máximo (150ms)
+    0.1f,              // Tempo de vida máximo (150ms)
     glm::vec3(0.0f),    // Posição (será definida ao disparar)
     glm::vec3(1.0f, 0.7f, 0.3f), // Cor laranja-amarelada
     3.0f                // Intensidade da luz
@@ -315,6 +315,7 @@ int window_height = 600.0f;
 #define pol_helmet 24
 #define pol_jaket 25
 #define pol_pants 26
+#define MUZZLE_FLASH 27
 
 /*
 struct Enemy {
@@ -474,6 +475,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/textures/Image_10.png"); // TextureImage19
     LoadTextureImage("../../data/textures/Image_32.png"); // TextureImage20
     LoadTextureImage("../../data/textures/Image_35.png"); // TextureImage21
+    LoadTextureImage("../../data/textures/muzzleflash.png"); // TextureImage22
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
     ObjModel planemodel("../../data/plane.obj");
@@ -497,6 +499,10 @@ int main(int argc, char* argv[])
     ObjModel enemymodel("../../data/Soldier.obj");
     ComputeNormals(&enemymodel);
     BuildTrianglesAndAddToVirtualScene(&enemymodel);
+
+    ObjModel muzzleFlashModel("../../data/muzzleflash.obj");
+    ComputeNormals(&muzzleFlashModel);
+    BuildTrianglesAndAddToVirtualScene(&muzzleFlashModel);
 
     // Inicializa os inimigos
     g_Enemies.clear();
@@ -846,31 +852,6 @@ int main(int argc, char* argv[])
             DrawVirtualObject("pol_jaket_0");
         }
 
-        if (g_MuzzleFlash.active) {
-            // Calculate the size based on remaining lifetime
-            float fadeSize = 1.0f - (g_MuzzleFlash.lifetime / g_MuzzleFlash.max_lifetime);
-            float flashSize = 0.2f * fadeSize;
-            
-            // Position the flash at the muzzle position
-            model = Matrix_Translate(g_MuzzleFlash.position.x, g_MuzzleFlash.position.y, g_MuzzleFlash.position.z)
-                * Matrix_Scale(flashSize, flashSize, flashSize)
-                * Matrix_Rotate_Y(g_CameraTheta); // Face camera
-            
-            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            
-            // Draw a simple quad for the muzzle flash
-            // You would need to create a special VAO for this
-            glDisable(GL_DEPTH_TEST);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive blending for glow effect
-            
-            // Draw your muzzle flash sprite here
-            // For example: DrawMuzzleFlashQuad();
-            
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glEnable(GL_DEPTH_TEST);
-        }
-
         model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
@@ -936,6 +917,54 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, ROOF);
         DrawVirtualObject("the_plane");
+
+        if (g_MuzzleFlash.active) {
+            // Calculate fade factor
+            float fadeFactor = 1.0f - (g_MuzzleFlash.lifetime / g_MuzzleFlash.max_lifetime);
+            
+            // Calculate rotation to face camera
+            glm::vec3 flashPos = g_MuzzleFlash.position;
+            glm::mat4 flashModel;
+            
+            if (FirstPerson) {
+                // First person muzzle flash needs special rotation to face forward
+                // Instead of aligning with camera phi and theta, we want it to face forward
+                // in the direction the gun is pointing
+                flashModel = Matrix_Translate(flashPos.x, flashPos.y, flashPos.z)
+                        * Matrix_Rotate_Y(g_CameraTheta - 2.6f)  // Rotate to face camera direction
+                        * Matrix_Rotate_X(-g_CameraPhi)  // Rotate to face forward
+                        * Matrix_Rotate_Z(3.1415f)  // Rotate 90 degrees to face forward
+                        * Matrix_Scale(-0.1f * fadeFactor, -0.1f * fadeFactor, 0.1f * fadeFactor);
+            } else {
+                // Third person muzzle flash
+                flashModel = Matrix_Translate(flashPos.x, flashPos.y, flashPos.z)
+                        * Matrix_Rotate_Y(g_CameraTheta)
+                        * Matrix_Rotate_X(-3.14159f)  // Same rotation here for consistency
+                        * Matrix_Scale(0.1f * fadeFactor, 0.2f * fadeFactor, 0.1f * fadeFactor);
+            }
+            
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(flashModel));
+            
+            // Disable depth writing and enable additive blending for glow effect
+            glDepthMask(GL_FALSE);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            
+            // Make sure it's always visible
+            glDisable(GL_DEPTH_TEST);
+            
+            // Set correct texture unit for muzzle flash
+            //glActiveTexture(GL_TEXTURE0 + 22);
+            //glBindTexture(GL_TEXTURE_2D, 22);
+            
+            glUniform1i(g_object_id_uniform, MUZZLE_FLASH);
+            DrawVirtualObject("cube11_cube11_auv");
+            
+            // Restore state
+            glEnable(GL_DEPTH_TEST);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_TRUE);
+        }
 
         // Remove enemies with health <= 0
         g_Enemies.erase(std::remove_if(g_Enemies.begin(), g_Enemies.end(), [](const Enemy& enemy) {
@@ -1215,6 +1244,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage19"), 19);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage20"), 20);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage21"), 21);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage22"), 22);
     glUseProgram(0);
 }
 
@@ -1644,28 +1674,29 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
             g_MuzzleFlash.active = true;
             g_MuzzleFlash.lifetime = 0.0f;
             
-            // Calcula a posição do cano da arma
-            glm::vec3 gunOffset = glm::vec3(-0.05f, 1.55f, 0.9f); // Ajuste esses valores conforme necessário
-            glm::mat4 gunTransform = Matrix_Identity();
             
             if (FirstPerson) {
-                // Posição da arma em primeira pessoa
-                gunTransform = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) 
-                            * Matrix_Translate(character_position.x, character_position.y, character_position.z) 
-                            * Matrix_Rotate_Y(g_CameraTheta) 
-                            * Matrix_Translate(0.0f, camera_height, 0.0f) 
-                            * Matrix_Rotate_X(g_CameraPhi) 
-                            * Matrix_Translate(0.0f, -camera_height, 0.0f);
+                
+                // Convert the camera view direction to world space
+                glm::vec3 forward = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));
+                
+                // Position the muzzle flash at the gun position + offset in the view direction
+                // In MouseButtonCallback when firing in first person
+                g_MuzzleFlash.position = character_position + 
+                                        glm::vec3(0.0f, camera_height, 0.0f) + 
+                                        forward * 0.5f +  // Increased from 0.5f to 0.7f to push it forward
+                                        glm::vec3(0.0f, -0.1f, 0.0f);
             } else {
-                // Posição da arma em terceira pessoa
-                gunTransform = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) 
+                // Keep your existing third-person calculation
+                glm::vec3 gunOffset = glm::vec3(-0.05f, 1.55f, 1.0f);
+                glm::mat4 gunTransform = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) 
                             * Matrix_Translate(character_position.x, character_position.y, character_position.z) 
                             * Matrix_Rotate_Y(g_CameraTheta);
+                            
+                // Transform gun offset to world space
+                glm::vec4 worldMuzzlePos = gunTransform * glm::vec4(gunOffset, 1.0f);
+                g_MuzzleFlash.position = glm::vec3(worldMuzzlePos);
             }
-
-            // Transforma gun offset para o espaço mundial
-            glm::vec4 worldMuzzlePos = gunTransform * glm::vec4(gunOffset, 1.0f);
-            g_MuzzleFlash.position = glm::vec3(worldMuzzlePos);
         }
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
