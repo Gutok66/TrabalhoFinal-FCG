@@ -557,6 +557,16 @@ void main()
         ambient = vec4(0.0, 0.0, 0.0, 0.0);
         specular = vec4(0.0, 0.0, 0.0, 0.0);
     }
+    else if (object_id == -1)
+    {
+        color = vec4(1.0, 0.0, 0.0, 1.0); // vermelho opaco
+        return;
+    }
+    else if (object_id == -2)
+    {
+        color = vec4(1.0, 0.0, 0.0, 0.3); // vermelho transparente (X-ray)
+        return;
+    }
     if (muzzle_flash_active)
     {
         // Calculate direction from fragment to muzzle flash

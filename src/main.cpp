@@ -172,6 +172,8 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
 void TextRendering_ShowAmmo(GLFWwindow* window);
 void TextRendering_ShowKills(GLFWwindow* window);
 void TextRendering_ShowReload(GLFWwindow* window);
+void DrawBoundingBox(const glm::vec3& bbox_min, const glm::vec3& bbox_max, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection);
+
 
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
@@ -778,6 +780,8 @@ int main(int argc, char* argv[])
                 }
                 DrawVirtualObject(barricade.shapes[j].name.c_str());
             }
+             const auto& scene_obj = g_VirtualScene[barricade.shapes[1].name];
+            DrawBoundingBox(scene_obj.bbox_min, scene_obj.bbox_max, model, view, projection);
         }
 
         if (!FirstPerson){
@@ -1110,6 +1114,8 @@ int main(int argc, char* argv[])
             glEnable(GL_DEPTH_TEST);
         }
 
+        
+
         // Desenha a crosshair 2D no centro da tela
         glDisable(GL_DEPTH_TEST);
         
@@ -1130,6 +1136,8 @@ int main(int argc, char* argv[])
         // Restaura estado
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
+
+        
 
 
         TextRendering_ShowAmmo(window);
@@ -2160,6 +2168,76 @@ void TextRendering_ShowReload(GLFWwindow* window)
 
     if ( Ammo == 0 )
         TextRendering_PrintString(window, "Press R to reload", 0.0f-12*charwidth, 0.0f+2*lineheight, 1.5f);
+}
+
+void DrawBoundingBox(const glm::vec3& bbox_min, const glm::vec3& bbox_max, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
+{
+    // 8 vértices do cubo
+    glm::vec3 v[8] = {
+        {bbox_min.x, bbox_min.y, bbox_min.z},
+        {bbox_max.x, bbox_min.y, bbox_min.z},
+        {bbox_max.x, bbox_max.y, bbox_min.z},
+        {bbox_min.x, bbox_max.y, bbox_min.z},
+        {bbox_min.x, bbox_min.y, bbox_max.z},
+        {bbox_max.x, bbox_min.y, bbox_max.z},
+        {bbox_max.x, bbox_max.y, bbox_max.z},
+        {bbox_min.x, bbox_max.y, bbox_max.z}
+    };
+
+    GLuint indices[] = {
+        0,1, 1,2, 2,3, 3,0, // base inferior
+        4,5, 5,6, 6,7, 7,4, // base superior
+        0,4, 1,5, 2,6, 3,7  // colunas
+    };
+
+    float vertices[24];
+    for (int i = 0; i < 8; ++i) {
+        glm::vec4 p = model * glm::vec4(v[i], 1.0f);
+        vertices[3*i+0] = p.x;
+        vertices[3*i+1] = p.y;
+        vertices[3*i+2] = p.z;
+    }
+
+    GLuint VAO, VBO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Use cor fixa para a bounding box
+    glUniform1i(g_object_id_uniform, -1); // Use um id especial para cor fixa no shader
+    glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+    glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+
+    // Primeira passada: normal, respeitando profundidade
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(2.0f);
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+
+    // Segunda passada: X-ray, por cima de tudo, mais transparente
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glUniform1i(g_object_id_uniform, -2); // Use outro id para cor transparente no shader
+    glDisable(GL_DEPTH_TEST);
+    glLineWidth(1.0f);
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteVertexArrays(1, &VAO);
 }
 
 // Função para debugging: imprime no terminal todas informações de um modelo
