@@ -37,12 +37,12 @@ void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {
 
     // --- WALL COLLISION ---
     // Clamp X coordinate
-    if (character_position.x > WorldBounds::MaxX) character_position.x = WorldBounds::MaxX;
-    if (character_position.x < WorldBounds::MinX) character_position.x = WorldBounds::MinX;
+    if (character_position.x > WorldBounds::MaxX - 0.5f) character_position.x = WorldBounds::MaxX - 0.5f;
+    if (character_position.x < WorldBounds::MinX + 0.5f) character_position.x = WorldBounds::MinX + 0.5f;
 
     // Clamp Z coordinate
-    if (character_position.z > WorldBounds::MaxZ) character_position.z = WorldBounds::MaxZ;
-    if (character_position.z < WorldBounds::MinZ) character_position.z = WorldBounds::MinZ;
+    if (character_position.z > WorldBounds::MaxZ - 0.5f) character_position.z = WorldBounds::MaxZ - 0.5f;
+    if (character_position.z < WorldBounds::MinZ + 0.5f) character_position.z = WorldBounds::MinZ + 0.5f;
 }
 
 void Physics::UpdateProjectiles(float currentTime) {
@@ -57,22 +57,16 @@ void Physics::UpdateProjectiles(float currentTime) {
 }
 
 void Physics::HandleShooting(const glm::vec3& character_position,
-                             float cameraTheta, float cameraPhi,
-                             float cameraDistance, bool firstPerson,
+                             const glm::vec4& camera_position_c,
+                             const glm::vec4& camera_view_vector,
+                             const glm::vec4& g_CameraFront,
+                             bool firstPerson,
                              std::vector<Enemy>& enemies) {
-    glm::vec3 character_front = glm::vec3(cos(cameraPhi) * sin(cameraTheta), -sin(cameraPhi), cos(cameraPhi) * cos(cameraTheta));
-    glm::vec3 character_right = glm::vec3(-cos(cameraTheta), 0.0f, sin(cameraTheta));
-
-    float camera_height = 1.7f;
-    glm::vec3 camera_position = character_position + glm::vec3(0.0f, camera_height, 0.0f);
+    glm::vec3 projectile_direction = glm::vec3(g_CameraFront);
     if (!firstPerson) {
-        camera_position -= character_front * cameraDistance;
-        camera_position += character_right * 0.5f;
+        projectile_direction = glm::vec3(camera_view_vector);
     }
-
-    glm::vec3 camera_lookat = camera_position + character_front * 100.0f;
-    glm::vec3 projectile_direction = glm::normalize(camera_lookat - camera_position);
-    glm::vec3 projectile_start = camera_position + projectile_direction * 1.5f;
+    glm::vec3 projectile_start = glm::vec3(camera_position_c);
 
     float closest_hit_distance = Physics::PROJECTILE_MAX_DISTANCE;
     
@@ -103,6 +97,25 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     // Front Wall (z=20)
     if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, 0, WorldBounds::MaxZ), glm::vec3(0, 0, -1), hit_distance)) {
         closest_hit_distance = std::min(closest_hit_distance, hit_distance);
+    }
+
+    glm::vec3 barricade_bbox_min = glm::vec3(-1.0000, -1.0000, -1.0000); 
+    glm::vec3 barricade_bbox_max = glm::vec3(2.8668, 1.0000, 1.0000); 
+
+    glm::vec3 box_size = barricade_bbox_max - barricade_bbox_min;
+    glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
+
+    for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
+        // Reconstruct the model matrix for the barricade, just like in main.cpp
+        glm::mat4 model_matrix = 
+            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) * Matrix_Rotate_Y(g_BarricadeRotation[i]) * Matrix_Scale(1.2f, 1.2f, 1.2f);
+
+        float barricade_hit_distance;
+        if (Physics::RayIntersectsOBB(projectile_start, projectile_direction, box_center_offset, box_size, model_matrix, barricade_hit_distance)) {
+            if (barricade_hit_distance < closest_hit_distance) {
+                closest_hit_distance = barricade_hit_distance;
+            }
+        }
     }
 
     // --- Check collision with enemies ---
@@ -147,37 +160,43 @@ void Physics::HandleShooting(const glm::vec3& character_position,
         }
     }
 
-    // --- Check collision with trees ---
-    /*for (const auto& tree_position : g_BarricadePositions) {
-        float tree_hit_distance;
-        float tree_radius = 2.0f;
-        if (Physics::RayIntersectsSphere(projectile_start, projectile_direction, tree_position, tree_radius, tree_hit_distance)) {
-            closest_hit_distance = std::min(closest_hit_distance, tree_hit_distance);
-        }
-    }*/
-    // collision com barricade
-    glm::vec3 barricade_bbox_min = glm::vec3(-1.0000, -1.0000, -1.0000); 
-    glm::vec3 barricade_bbox_max = glm::vec3(2.8668, 1.0000, 1.0000); 
-
-    glm::vec3 box_size = barricade_bbox_max - barricade_bbox_min;
-    glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
-
-    for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
-        // Reconstruct the model matrix for the barricade, just like in main.cpp
-        glm::mat4 model_matrix = 
-            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) * Matrix_Rotate_Y(g_BarricadeRotation[i]) * Matrix_Scale(1.2f, 1.2f, 1.2f);
-
-        float barricade_hit_distance;
-        if (Physics::RayIntersectsOBB(projectile_start, projectile_direction, box_center_offset, box_size, model_matrix, barricade_hit_distance)) {
-            if (barricade_hit_distance < closest_hit_distance) {
-                closest_hit_distance = barricade_hit_distance;
-            }
-        }
-    }
-
     Projectile new_projectile;
-    new_projectile.start_position = projectile_start;
-    new_projectile.end_position = projectile_start + projectile_direction * closest_hit_distance;
+
+    if (firstPerson) {
+        // Offset do cano em primeira pessoa (ajuste conforme necessário)
+        glm::vec3 barrel_offset = glm::vec3(-0.05f, -0.17f, 1.0f); // esquerda, cima, frente
+
+        // Calcula yaw e pitch a partir do camera front
+        float yaw = atan2(g_CameraFront.x, g_CameraFront.z);
+        float pitch = -asin(g_CameraFront.y);
+
+        // Matriz de rotação composta: primeiro yaw (Y), depois pitch (X)
+        glm::mat4 rot = Matrix_Rotate_Y(yaw) * Matrix_Rotate_X(pitch);
+
+        new_projectile.start_position = glm::vec3(camera_position_c) + glm::vec3(rot * glm::vec4(barrel_offset, 0.0f));
+        printf("First person barrel position: (%.2f, %.2f, %.2f)\n", new_projectile.start_position.x, new_projectile.start_position.y, new_projectile.start_position.z);
+    } else {
+        // Offset do cano em terceira pessoa (ajuste conforme necessário)
+        glm::vec3 barrel_offset = glm::vec3(-0.04f, 1.53f, 1.0f); // esquerda, altura do ombro, frente
+
+        // Calcula yaw e pitch a partir do camera front
+        float yaw = atan2(g_CameraFront.x, g_CameraFront.z);
+
+        glm::mat4 rot = Matrix_Rotate_Y(yaw);
+
+        new_projectile.start_position = character_position + glm::vec3(rot * glm::vec4(barrel_offset, 0.0f));
+        printf("Third person barrel position: (%.2f, %.2f, %.2f)\n", new_projectile.start_position.x, new_projectile.start_position.y, new_projectile.start_position.z);
+    }
+    //new_projectile.start_position = projectile_start + projectile_direction * 1.0f;
+    
+    
+    if(closest_hit_distance <= norm(camera_position_c - glm::vec4(new_projectile.start_position, 0.0f))) {
+        new_projectile.end_position = new_projectile.start_position;
+    }
+    else{
+        new_projectile.end_position = projectile_start + projectile_direction * closest_hit_distance;
+    }
+    
     new_projectile.active = true;
     new_projectile.creation_time = (float)glfwGetTime();
 

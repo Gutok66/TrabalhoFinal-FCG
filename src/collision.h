@@ -50,8 +50,10 @@ namespace Physics {
     void Initialize();
     void ApplyPlayerPhysics(glm::vec3& character_position);
     void HandleShooting(const glm::vec3& character_position,
-                       float cameraTheta, float cameraPhi,
-                       float cameraDistance, bool firstPerson,
+                        const glm::vec4& camera_position_c,
+                        const glm::vec4& camera_view_vector,
+                        const glm::vec4& g_CameraFront,
+                        bool firstPerson,
                        std::vector<Enemy>& enemies);
     void UpdateProjectiles(float currentTime);
 
