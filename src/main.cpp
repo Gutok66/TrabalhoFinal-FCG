@@ -213,6 +213,10 @@ const float JUMP_FORCE = 5.0f; // Altura do pulo
 // var para hitbox player
 glm::vec3 g_PlayerSize = glm::vec3(0.6f, 1.8f, 0.6f); 
 
+// vars para hitbox dos inimigos
+glm::vec3 g_EnemyPhysicsBboxMin;
+glm::vec3 g_EnemyPhysicsBboxMax;
+
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
 // objetos dentro da variável g_VirtualScene, e veja na função main() como
@@ -514,70 +518,82 @@ struct CollisionInfo
     glm::vec3 mtv = glm::vec3(0.0f); // Minimum Translation Vector to resolve the collision
 };
 
-// New, verified collision detection function for AABB vs OBB
-CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerMax, const glm::mat4& barricadeTransform, const glm::vec3& barricadeMinLocal, const glm::vec3& barricadeMaxLocal)
+// BULLETPROOF version of the collision detection function
+CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerMax, const glm::mat4& objectTransform, const glm::vec3& objectMinLocal, const glm::vec3& objectMaxLocal)
 {
-    // Get world-space properties of both boxes
+    // --- Get World-Space Properties of Both Boxes ---
     const glm::vec3 playerHalfExtents = (playerMax - playerMin) / 2.0f;
     const glm::vec3 playerCenter = playerMin + playerHalfExtents;
 
-    const glm::vec3 barricadeHalfExtentsLocal = (barricadeMaxLocal - barricadeMinLocal) / 2.0f;
-    const glm::vec3 barricadeCenter = glm::vec3(barricadeTransform * glm::vec4((barricadeMinLocal + barricadeMaxLocal) / 2.0f, 1.0f));
+    const glm::vec3 objectHalfExtentsLocal = (objectMaxLocal - objectMinLocal) / 2.0f;
+    const glm::vec3 objectCenter = glm::vec3(objectTransform * glm::vec4((objectMinLocal + objectMaxLocal) / 2.0f, 1.0f));
 
     // OBB orientation axes (normalized direction vectors)
-    glm::vec3 obbAxes[3] = {
-        glm::normalize(glm::vec3(barricadeTransform[0])),
-        glm::normalize(glm::vec3(barricadeTransform[1])),
-        glm::normalize(glm::vec3(barricadeTransform[2]))
+    glm::vec3 objectAxes[3] = {
+        glm::normalize(glm::vec3(objectTransform[0])),
+        glm::normalize(glm::vec3(objectTransform[1])),
+        glm::normalize(glm::vec3(objectTransform[2]))
     };
 
     // OBB scaled half-extents (size along each of its axes)
-    glm::vec3 obbScaledHalfExtents = {
-        glm::length(glm::vec3(barricadeTransform[0])) * barricadeHalfExtentsLocal.x,
-        glm::length(glm::vec3(barricadeTransform[1])) * barricadeHalfExtentsLocal.y,
-        glm::length(glm::vec3(barricadeTransform[2])) * barricadeHalfExtentsLocal.z
+    glm::vec3 objectScaledHalfExtents = {
+        glm::length(glm::vec3(objectTransform[0])) * objectHalfExtentsLocal.x,
+        glm::length(glm::vec3(objectTransform[1])) * objectHalfExtentsLocal.y,
+        glm::length(glm::vec3(objectTransform[2])) * objectHalfExtentsLocal.z
     };
 
     // AABB orientation axes (world axes)
     glm::vec3 playerAxes[3] = {
-        glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)
+        glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f)
     };
 
     // --- Separating Axis Theorem (SAT) ---
-    // We must test 15 axes for separation
-    glm::vec3 axesToTest[15];
-    int axisCount = 0;
-    for (int i = 0; i < 3; i++) axesToTest[axisCount++] = playerAxes[i];
-    for (int i = 0; i < 3; i++) axesToTest[axisCount++] = obbAxes[i];
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            axesToTest[axisCount++] = glm::cross(playerAxes[i], obbAxes[j]);
-        }
-    }
-
     float minOverlap = std::numeric_limits<float>::max();
     glm::vec3 smallestAxis;
-    glm::vec3 centerToCenter = barricadeCenter - playerCenter;
+    
+    // Axes to test: 3 from player, 3 from object, 9 from cross products
+    glm::vec3 axesToTest[15];
+    axesToTest[0] = playerAxes[0];
+    axesToTest[1] = playerAxes[1];
+    axesToTest[2] = playerAxes[2];
+    axesToTest[3] = objectAxes[0];
+    axesToTest[4] = objectAxes[1];
+    axesToTest[5] = objectAxes[2];
+    axesToTest[6] = glm::cross(playerAxes[0], objectAxes[0]);
+    axesToTest[7] = glm::cross(playerAxes[0], objectAxes[1]);
+    axesToTest[8] = glm::cross(playerAxes[0], objectAxes[2]);
+    axesToTest[9] = glm::cross(playerAxes[1], objectAxes[0]);
+    axesToTest[10] = glm::cross(playerAxes[1], objectAxes[1]);
+    axesToTest[11] = glm::cross(playerAxes[1], objectAxes[2]);
+    axesToTest[12] = glm::cross(playerAxes[2], objectAxes[0]);
+    axesToTest[13] = glm::cross(playerAxes[2], objectAxes[1]);
+    axesToTest[14] = glm::cross(playerAxes[2], objectAxes[2]);
 
-    for (int i = 0; i < axisCount; i++) {
+    for (int i = 0; i < 15; i++) {
         glm::vec3 axis = axesToTest[i];
-        if (glm::dot(axis, axis) < 0.0001f) continue; // Skip zero-length axes
+        
+        // SAFETY CHECK: Skip near-zero axes from parallel cross products
+        if (glm::dot(axis, axis) < 1e-8f) {
+            continue;
+        }
         axis = glm::normalize(axis);
 
         // Project both boxes onto the current axis
-        float rA = playerHalfExtents.x * glm::abs(glm::dot(axis, playerAxes[0])) +
-                   playerHalfExtents.y * glm::abs(glm::dot(axis, playerAxes[1])) +
-                   playerHalfExtents.z * glm::abs(glm::dot(axis, playerAxes[2]));
+        float rA = glm::abs(playerHalfExtents.x * glm::dot(axis, playerAxes[0])) +
+                   glm::abs(playerHalfExtents.y * glm::dot(axis, playerAxes[1])) +
+                   glm::abs(playerHalfExtents.z * glm::dot(axis, playerAxes[2]));
 
-        float rB = obbScaledHalfExtents.x * glm::abs(glm::dot(axis, obbAxes[0])) +
-                   obbScaledHalfExtents.y * glm::abs(glm::dot(axis, obbAxes[1])) +
-                   obbScaledHalfExtents.z * glm::abs(glm::dot(axis, obbAxes[2]));
+        float rB = glm::abs(objectScaledHalfExtents.x * glm::dot(axis, objectAxes[0])) +
+                   glm::abs(objectScaledHalfExtents.y * glm::dot(axis, objectAxes[1])) +
+                   glm::abs(objectScaledHalfExtents.z * glm::dot(axis, objectAxes[2]));
 
-        float distance = glm::abs(glm::dot(centerToCenter, axis));
+        float distance = glm::abs(glm::dot(objectCenter - playerCenter, axis));
 
         if (distance > rA + rB) {
             // A separating axis was found, there is no collision
-            return {}; // Return default (hasCollided = false)
+            return {};
         }
 
         // This is not a separating axis, calculate the overlap
@@ -588,16 +604,22 @@ CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerM
         }
     }
 
-    // No separating axis was found, a collision has occurred
+    // No separating axis found, a collision has occurred
     CollisionInfo result;
     result.hasCollided = true;
     
-    // Ensure the MTV always pushes the player away from the barricade
-    if (glm::dot(centerToCenter, smallestAxis) > 0) {
+    // Ensure the MTV always pushes the player away from the object
+    if (glm::dot(objectCenter - playerCenter, smallestAxis) > 0) {
         smallestAxis = -smallestAxis;
     }
     
     result.mtv = smallestAxis * minOverlap;
+    
+    // FINAL SAFETY CHECK: Prevent NaN or infinity values from ever leaving this function
+    if (std::isnan(result.mtv.x) || std::isinf(result.mtv.x)) {
+        return {}; // Return a safe, non-colliding result
+    }
+
     return result;
 }
 
@@ -753,6 +775,72 @@ int main(int argc, char* argv[])
     Physics::ENEMY_LEGS_HITBOX.offset = (legs_obj.bbox_min + legs_obj.bbox_max) * 0.5f;
     Physics::ENEMY_LEGS_HITBOX.size   = legs_obj.bbox_max - legs_obj.bbox_min;
 
+    // --- Calculate a single physics bounding box for the entire enemy ---
+    g_EnemyPhysicsBboxMin = glm::min(
+        Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+        Physics::ENEMY_BODY_HITBOX.offset - Physics::ENEMY_BODY_HITBOX.size * 0.5f
+    );
+    g_EnemyPhysicsBboxMin = glm::min(
+        g_EnemyPhysicsBboxMin,
+        Physics::ENEMY_HEAD_HITBOX.offset - Physics::ENEMY_HEAD_HITBOX.size * 0.5f
+    );
+
+    g_EnemyPhysicsBboxMax = glm::max(
+        Physics::ENEMY_LEGS_HITBOX.offset + Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+        Physics::ENEMY_BODY_HITBOX.offset + Physics::ENEMY_BODY_HITBOX.size * 0.5f
+    );
+    g_EnemyPhysicsBboxMax = glm::max(
+        g_EnemyPhysicsBboxMax,
+        Physics::ENEMY_HEAD_HITBOX.offset + Physics::ENEMY_HEAD_HITBOX.size * 0.5f
+    );
+
+
+    // --- Calculate a single physics bounding box for the entire enemy ---
+    g_EnemyPhysicsBboxMin = glm::min(
+        Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+        Physics::ENEMY_BODY_HITBOX.offset - Physics::ENEMY_BODY_HITBOX.size * 0.5f
+    );
+    g_EnemyPhysicsBboxMin = glm::min(
+        g_EnemyPhysicsBboxMin,
+        Physics::ENEMY_HEAD_HITBOX.offset - Physics::ENEMY_HEAD_HITBOX.size * 0.5f
+    );
+
+    g_EnemyPhysicsBboxMax = glm::max(
+        Physics::ENEMY_LEGS_HITBOX.offset + Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+        Physics::ENEMY_BODY_HITBOX.offset + Physics::ENEMY_BODY_HITBOX.size * 0.5f
+    );
+    g_EnemyPhysicsBboxMax = glm::max(
+        g_EnemyPhysicsBboxMax,
+        Physics::ENEMY_HEAD_HITBOX.offset + Physics::ENEMY_HEAD_HITBOX.size * 0.5f
+    );
+for (int iter = 0; iter < 10; ++iter) 
+{
+    // ... (The existing code that checks for floor collision can stay)
+
+    glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+    glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+    
+    // --- This loop for barricades stays the same ---
+    for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
+    {
+        // ... existing barricade collision code ...
+    }
+
+    // +++ ADD THIS NEW LOOP FOR ENEMIES +++
+    for (auto& enemy : g_Enemies)
+    {
+        if (enemy.health <= 0) continue; // Skip dead enemies
+
+        CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, enemy.model_matrix, g_EnemyPhysicsBboxMin, g_EnemyPhysicsBboxMax);
+
+        if (info.hasCollided)
+        {
+            // Push the player and enemy apart by half the distance each
+            character_position += info.mtv * 0.5f;
+            enemy.position -= info.mtv * 0.5f;
+        }
+    }
+}
     ObjModel muzzleFlashModel("../../data/muzzleflash.obj");
     ComputeNormals(&muzzleFlashModel);
     BuildTrianglesAndAddToVirtualScene(&muzzleFlashModel);
@@ -2277,13 +2365,11 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_vector -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_vector += right;
 
-    if (glm::length(move_vector) > 0.0f)
-    {
+    if (glm::length(move_vector) > 0.0f) {
         move_vector = glm::normalize(move_vector) * speed;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
-    {
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded) {
         g_CharacterVerticalVelocity = JUMP_FORCE;
     }
     
@@ -2293,44 +2379,41 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
     // Apply the combined movement vector
     character_position += move_vector * deltaTime;
 
-    // --- 2. Iteratively resolve all collisions (floor and objects) ---
+    // --- 2. Iteratively resolve all collisions with safety checks ---
     g_IsCharacterGrounded = false;
-    for (int iter = 0; iter < 10; ++iter) // More iterations improve stability in complex corners
+    for (int iter = 0; iter < 10; ++iter) 
     {
-        // Check for collision with the floor
-        if (character_position.y < 0.0f) {
+        glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+        glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+
+        // Check against the floor
+        if (player_bbox_min.y < 0.0f) {
             character_position.y = 0.0f;
             g_IsCharacterGrounded = true;
         }
-
-        // Define the player's current bounding box
-        glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
-        glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
         
-        // Check for collisions with all barricades
-        for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
-        {
-            glm::mat4 barricade_model_matrix =
-                Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
-                Matrix_Rotate_Y(g_BarricadeRotation[i]) *
-                Matrix_Scale(1.2f, 1.2f, 1.2f);
-            
+        // Check for collisions with barricades
+        for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
+            glm::mat4 barricade_model_matrix = Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) * Matrix_Rotate_Y(g_BarricadeRotation[i]) * Matrix_Scale(1.2f, 1.2f, 1.2f);
             CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, barricade_model_matrix, barricade_bbox_min, barricade_bbox_max);
-
-            if (info.hasCollided)
-            {
-                // Push the character out of the object by the minimum amount needed
+            if (info.hasCollided && glm::length(info.mtv) < 1.0f) { // SAFETY CHECK: Ignore huge MTVs
                 character_position += info.mtv;
-                
-                // If the primary push-back direction is upwards, we are standing on something
-                if (info.mtv.y > 0.0f) {
-                    g_IsCharacterGrounded = true;
-                }
+                if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
+            }
+        }
+
+        // Check for collisions with enemies
+        for (auto& enemy : g_Enemies) {
+            if (enemy.health <= 0) continue;
+            CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, enemy.model_matrix, g_EnemyPhysicsBboxMin, g_EnemyPhysicsBboxMax);
+            if (info.hasCollided && glm::length(info.mtv) < 1.0f) { // SAFETY CHECK: Ignore huge MTVs
+                character_position += info.mtv * 0.5f;
+                enemy.position     -= info.mtv * 0.5f;
+                if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
             }
         }
     }
 
-    // After all resolution, if we are on a surface, reset vertical velocity
     if (g_IsCharacterGrounded) {
         g_CharacterVerticalVelocity = 0.0f;
     }
