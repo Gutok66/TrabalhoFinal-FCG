@@ -333,7 +333,6 @@ bool Physics::RayIntersectsOBB(glm::vec3 ray_origin, glm::vec3 ray_direction,
 
     glm::vec4 ray_direction_local_4 = inv_model_matrix * glm::vec4(ray_direction, 0.0f);
     glm::vec3 ray_direction_local = glm::vec3(ray_direction_local_4);
-    //glm::vec3 ray_direction_local = glm::normalize(glm::vec3(ray_direction_local_4));
 
     glm::vec3 min_bound = box_center_offset - box_size / 2.0f;
     glm::vec3 max_bound = box_center_offset + box_size / 2.0f;
