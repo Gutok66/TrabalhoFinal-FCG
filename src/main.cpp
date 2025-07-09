@@ -210,6 +210,9 @@ bool g_IsCharacterGrounded = true;
 const float GRAVITY = -9.8f; // Gravidade da Terra em m/s²
 const float JUMP_FORCE = 5.0f; // Altura do pulo
 
+// var para hitbox player
+glm::vec3 g_PlayerSize = glm::vec3(0.6f, 1.8f, 0.6f); 
+
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
 // objetos dentro da variável g_VirtualScene, e veja na função main() como
@@ -383,6 +386,82 @@ void GenerateBezierCurve(Enemy& enemy) {
     enemy.p3.z = glm::clamp(enemy.p3.z, -19.0f, 19.0f);
     
     enemy.bezier_t = 0.0f; // Reseta o parâmetro da curva
+}
+
+// Checks for collision between two AABBs
+bool CheckAABBvsOBBCollision(
+    const glm::vec3& aabb_min, const glm::vec3& aabb_max,
+    const glm::vec3& obb_center, const glm::vec3& obb_half_extents, const glm::mat4& obb_transform)
+{
+    // Get properties of both boxes
+    glm::vec3 aabb_half_extents = (aabb_max - aabb_min) / 2.0f;
+    glm::vec3 aabb_center = aabb_min + aabb_half_extents;
+
+    // Get the axes of the OBB from its transformation matrix
+    glm::vec3 obb_axes[3] = {
+        glm::normalize(glm::vec3(obb_transform[0])),
+        glm::normalize(glm::vec3(obb_transform[1])),
+        glm::normalize(glm::vec3(obb_transform[2]))
+    };
+
+    // Get the world axes (for the AABB)
+    glm::vec3 aabb_axes[3] = {
+        glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f)
+    };
+
+    // Vector from the center of the AABB to the center of the OBB
+    glm::vec3 to_center = obb_center - aabb_center;
+
+    // --- Test all 15 potential separating axes ---
+
+    // 1. Test the 3 axes of the AABB
+    for (int i = 0; i < 3; ++i) {
+        float rA = aabb_half_extents[i];
+        float rB = obb_half_extents.x * glm::abs(glm::dot(aabb_axes[i], obb_axes[0])) +
+                   obb_half_extents.y * glm::abs(glm::dot(aabb_axes[i], obb_axes[1])) +
+                   obb_half_extents.z * glm::abs(glm::dot(aabb_axes[i], obb_axes[2]));
+
+        if (glm::abs(glm::dot(to_center, aabb_axes[i])) > rA + rB) {
+            return false; // Found a separating axis
+        }
+    }
+
+    // 2. Test the 3 axes of the OBB
+    for (int i = 0; i < 3; ++i) {
+        float rA = aabb_half_extents.x * glm::abs(glm::dot(obb_axes[i], aabb_axes[0])) +
+                   aabb_half_extents.y * glm::abs(glm::dot(obb_axes[i], aabb_axes[1])) +
+                   aabb_half_extents.z * glm::abs(glm::dot(obb_axes[i], aabb_axes[2]));
+        float rB = obb_half_extents[i];
+
+        if (glm::abs(glm::dot(to_center, obb_axes[i])) > rA + rB) {
+            return false; // Found a separating axis
+        }
+    }
+
+    // 3. Test the 9 cross-product axes
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            glm::vec3 axis = glm::cross(aabb_axes[i], obb_axes[j]);
+            if (glm::dot(axis, axis) < 0.00001f) continue; // Skip near-parallel axes
+
+            float rA = aabb_half_extents.x * glm::abs(glm::dot(axis, aabb_axes[0])) +
+                       aabb_half_extents.y * glm::abs(glm::dot(axis, aabb_axes[1])) +
+                       aabb_half_extents.z * glm::abs(glm::dot(axis, aabb_axes[2]));
+
+            float rB = obb_half_extents.x * glm::abs(glm::dot(axis, obb_axes[0])) +
+                       obb_half_extents.y * glm::abs(glm::dot(axis, obb_axes[1])) +
+                       obb_half_extents.z * glm::abs(glm::dot(axis, obb_axes[2]));
+
+            if (glm::abs(glm::dot(to_center, axis)) > rA + rB) {
+                return false; // Found a separating axis
+            }
+        }
+    }
+
+    // No separating axis was found, so the boxes are colliding
+    return true;
 }
 
 int main(int argc, char* argv[])
@@ -2008,7 +2087,7 @@ void ErrorCallback(int error, const char* description)
     fprintf(stderr, "ERROR: GLFW: %s\n", description);
 }
 
-void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
+/*void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
     float velocity = 5 * g_CameraSpeed * deltaTime;
 
@@ -2028,6 +2107,77 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
 
      // feito no deepseek   
      // Pulo (somente quando grounded)
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
+    {
+        g_CharacterVerticalVelocity = JUMP_FORCE;
+        g_IsCharacterGrounded = false;
+    }
+    // Gravidade
+    g_CharacterVerticalVelocity += GRAVITY * deltaTime;
+    
+    // Update vertical position
+    character_position.y += g_CharacterVerticalVelocity * deltaTime;
+
+    // Simple ground collision (y = 0 is ground level)
+    if (character_position.y <= 0.0f)
+    {
+        character_position.y = 0.0f;
+        g_CharacterVerticalVelocity = 0.0f;
+        g_IsCharacterGrounded = true;
+    }   
+}*/
+
+void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
+{
+    // Store position before applying movement for collision response
+    glm::vec3 previous_position = character_position;
+
+    float velocity = 5 * g_CameraSpeed * deltaTime;
+
+    // Character's local axes
+    glm::vec3 forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
+    glm::vec3 right   = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        character_position += forward * velocity;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        character_position -= forward * velocity;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        character_position -= right * velocity;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        character_position += right * velocity;
+
+    // --- CHARACTER-BARRICADE COLLISION LOGIC ---
+    // Calculate player's world-space AABB based on the new potential position.
+    glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+    glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+
+    // Check for collision with each barricade
+    for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
+    {
+        // Get the barricade's model matrix
+        glm::mat4 barricade_model_matrix =
+            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
+            Matrix_Rotate_Y(g_BarricadeRotation[i]) *
+            Matrix_Scale(1.2f, 1.2f, 1.2f);
+
+        // Define the barricade's OBB (Oriented Bounding Box) properties
+        glm::vec3 local_box_center = (barricade_bbox_min + barricade_bbox_max) / 2.0f;
+        glm::vec3 obb_center = glm::vec3(barricade_model_matrix * glm::vec4(local_box_center, 1.0f));
+        
+        // Half-extents are half the size, adjusted by the object's scale
+        glm::vec3 obb_half_extents = ((barricade_bbox_max - barricade_bbox_min) / 2.0f) * 1.2f;
+
+        // Check for collision using the new, accurate function
+        if (CheckAABBvsOBBCollision(player_bbox_min, player_bbox_max, obb_center, obb_half_extents, barricade_model_matrix))
+        {
+            character_position = previous_position; // Collision detected! Revert to the position before movement.
+            break; // Stop checking other barricades for this frame.
+        }
+    }
+    // --- END OF COLLISION LOGIC ---
+
+    // Pulo (somente quando grounded)
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
     {
         g_CharacterVerticalVelocity = JUMP_FORCE;
