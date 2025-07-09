@@ -187,24 +187,6 @@ void Physics::HandleShooting(const glm::vec3& character_position,
                 g_BloodSplatters.push_back(splatter);
             }
         }
-        if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_BODY_HITBOX.offset, ENEMY_BODY_HITBOX.size, enemy.model_matrix, body_hit_distance)) {
-            if (body_hit_distance < closest_hit_distance) {
-                closest_hit_distance = body_hit_distance;
-                // You can add logic here to know you hit the body and apply 40 damage
-                enemy.health -= 40;
-                printf("Hit enemy body! Remaining health: %d\n", enemy.health);
-                // Add blood splatter effect
-                BloodSplatter splatter;
-                splatter.active = true;
-                splatter.lifetime = 0.0f;
-                splatter.max_lifetime = 0.5f;
-                // Calculate hit position
-                splatter.position = projectile_start + projectile_direction * body_hit_distance;
-                splatter.size = 0.5f;
-                splatter.rotation = ((float)rand() / RAND_MAX) * 2.0f * 3.14159f; // Random rotation
-                g_BloodSplatters.push_back(splatter);
-            }
-        }
 
         float head_hit_distance;
         if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_HEAD_HITBOX.offset, ENEMY_HEAD_HITBOX.size, enemy.model_matrix, head_hit_distance)) {

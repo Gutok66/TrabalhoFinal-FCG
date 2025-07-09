@@ -204,20 +204,20 @@ const float PROJECTILE_LIFETIME = 1.0f;
 const float PROJECTILE_MAX_DISTANCE = 100.0f;
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
-// variáveis para gravidade e pulo
+// Variáveis para gravidade e pulo
 float g_CharacterVerticalVelocity = 0.0f;
 bool g_IsCharacterGrounded = true;
 const float GRAVITY = -9.8f; // Gravidade da Terra em m/s²
 const float JUMP_FORCE = 5.0f; // Altura do pulo
 
-// var para hitbox player
+// Variável para hitbox player
 glm::vec3 g_PlayerSize = glm::vec3(0.6f, 1.8f, 0.6f); 
 
-// vars para hitbox dos inimigos
+// Variáveis para hitbox dos inimigos
 glm::vec3 g_EnemyPhysicsBboxMin;
 glm::vec3 g_EnemyPhysicsBboxMax;
 
-// vars para hitbox com carro
+// Variáveis para hitbox com carro
 glm::vec3 g_CarBboxMin;
 glm::vec3 g_CarBboxMax;
 
@@ -292,7 +292,7 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
-// para projetil
+// Variáveis para projectile
 GLint g_projectile_alpha_uniform;
 GLint g_blood_alpha_uniform;
 GLint g_muzzle_flash_active_uniform;
@@ -343,16 +343,6 @@ int window_height = 600.0f;
 #define BLOOD_SPLATTER 28
 #define COVERED_CAR 29
 
-/*
-struct Enemy {
-    glm::vec3 position;
-    int health;
-    glm::vec3 p0, p1, p2, p3; // Pontos de controle da curva de Bezier
-    float bezier_t;          // Parâmetro atual na curva (0 a 1)
-    float speed;             // Velocidade de movimento ao longo da curva
-};
-std::vector<Enemy> g_Enemies;
-*/
 
 // Função para calcular um ponto na curva de Bezier cúbica
 glm::vec3 CalculateBezierPoint(float t, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
@@ -401,7 +391,8 @@ void GenerateBezierCurve(Enemy& enemy) {
     enemy.bezier_t = 0.0f; // Reseta o parâmetro da curva
 }
 
-// Checks for collision between two AABBs
+// Feito com ajuda de IA
+// Checa colisão entre dois AABBs
 bool CheckAABBvsOBBCollision(
     const glm::vec3& aabb_min, const glm::vec3& aabb_max,
     const glm::vec3& obb_center, const glm::vec3& obb_half_extents, const glm::mat4& obb_transform)
@@ -477,6 +468,8 @@ bool CheckAABBvsOBBCollision(
     return true;
 }
 
+// feito com ajuda de IA
+// calcula melhor colisão em cima dos objetos
 bool Check2DAABBvsOBBCollision(
     const glm::vec3& aabb_min, const glm::vec3& aabb_max,
     const glm::vec3& obb_center, const glm::vec3& obb_half_extents, const glm::mat4& obb_transform)
@@ -520,6 +513,7 @@ bool Check2DAABBvsOBBCollision(
 
     return true; // No separating axis found, they overlap
 }
+// feito com ajuda de IA
 // A struct to hold information about a collision
 struct CollisionInfo
 {
@@ -527,7 +521,7 @@ struct CollisionInfo
     glm::vec3 mtv = glm::vec3(0.0f); // Minimum Translation Vector to resolve the collision
 };
 
-// BULLETPROOF version of the collision detection function
+// collision detection function
 CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerMax, const glm::mat4& objectTransform, const glm::vec3& objectMinLocal, const glm::vec3& objectMaxLocal)
 {
     // --- Get World-Space Properties of Both Boxes ---
@@ -669,7 +663,7 @@ int main(int argc, char* argv[])
         std::exit(EXIT_FAILURE);
     }
     
-    // Hide and capture the mouse cursor for FPS-style camera control
+    // Esconde o mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Definimos a função de callback que será chamada sempre que o usuário
@@ -745,6 +739,7 @@ int main(int argc, char* argv[])
     ComputeNormals(&car);
     BuildTrianglesAndAddToVirtualScene(&car);
 
+    // Feito com ajuda de IA
     // --- Calculate a single bounding box for the entire car model ---
     g_CarBboxMin = glm::vec3(std::numeric_limits<float>::max());
     g_CarBboxMax = glm::vec3(std::numeric_limits<float>::min());
@@ -769,7 +764,6 @@ int main(int argc, char* argv[])
     ComputeNormals(&barricade);
     BuildTrianglesAndAddToVirtualScene(&barricade);
 
-    // --- ADD THIS TEMPORARY CODE ---
     glm::vec3 total_bbox_min(std::numeric_limits<float>::max());
     glm::vec3 total_bbox_max(std::numeric_limits<float>::min());
 
@@ -814,6 +808,7 @@ int main(int argc, char* argv[])
     Physics::ENEMY_LEGS_HITBOX.offset = (legs_obj.bbox_min + legs_obj.bbox_max) * 0.5f;
     Physics::ENEMY_LEGS_HITBOX.size   = legs_obj.bbox_max - legs_obj.bbox_min;
 
+    // Feito com ajuda de IA
     // --- Calculate a single physics bounding box for the entire enemy ---
     g_EnemyPhysicsBboxMin = glm::min(
         Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
@@ -927,7 +922,6 @@ int main(int argc, char* argv[])
     glBindBuffer(GL_ARRAY_BUFFER, crosshairVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(crosshair_vertices), crosshair_vertices, GL_STATIC_DRAW);
 
-    // Then enable all attributes
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
@@ -978,6 +972,7 @@ int main(int argc, char* argv[])
 
         Physics::ApplyPlayerPhysics(character_position);
 
+        // Feito com ajuda de IA (eu acho)
         if (g_MuzzleFlash.active) {
             g_MuzzleFlash.lifetime += deltaTime;
             
@@ -1063,20 +1058,7 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-       // #define PLANE 0
-       // #define ENEMY_HEAD 1
-       // #define ENEMY_FACE 2
-       // #define ENEMY_EYE 3
-       // #define ENEMY_MIDDLE 4
-       // #define ENEMY_BOTTOM 5
-       // #define TREE_BRANCH 6
-       // #define TREE_TRUNK 7
-       // #define TREE_LEAVES 8
-       // #define TREE_BRANCH2 9
-       // #define TREE_BRANCH3 10
-       // #define CROSSHAIR 11
-       // #define PROJECTILE_LINE 12
-
+       // Lógica para recoil
        if (g_RecoilTimer > 0.0f) {
             g_RecoilTimer -= deltaTime;
 
@@ -1088,6 +1070,7 @@ int main(int argc, char* argv[])
             g_RecoilOffset = glm::vec3(0.0f);
         }
 
+        // Spawn de inimigos
         enemyTime = currentFrame - lastEnemyTime;
         if (enemyTime > 5.0f) { // Atualiza inimigos a cada 5 segundos
             lastEnemyTime = currentFrame;
@@ -1101,6 +1084,7 @@ int main(int argc, char* argv[])
             }
         }
 
+        // Spawn de barricadas
         for (size_t i = 0; i < g_BarricadePositions.size(); i++) {
             const auto& position = g_BarricadePositions[i];
             float rotation = g_BarricadeRotation[i];
@@ -1212,7 +1196,7 @@ int main(int argc, char* argv[])
             DrawVirtualObject("pol_jaket_0");
         }
 
-        // mostra hitbox do player
+        // Mostra hitbox do player
         if (ShowHitBoxes)
             {
                 // Define the player's local bounding box based on its physics size
@@ -1223,7 +1207,7 @@ int main(int argc, char* argv[])
                 DrawBoundingBox(player_local_bbox_min, player_local_bbox_max, model, view, projection);
             }
 
-
+        // Spawn carros
         for (size_t i = 0; i < g_CarPositions.size(); ++i) {
             model = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -1246,7 +1230,7 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
 
-        
+        // Feito com ajuda de IA
         // Atualiza e renderiza os inimigos
         for (auto& enemy : g_Enemies)
         {
@@ -1380,82 +1364,95 @@ int main(int argc, char* argv[])
             glDepthMask(GL_TRUE);
         }
 
+        // Corrigido com IA
         for (auto particle = g_BloodSplatters.begin(); particle != g_BloodSplatters.end(); ) {
-            particle->lifetime += deltaTime;
+        particle->lifetime += deltaTime;
+        
+        if (particle->lifetime >= particle->max_lifetime) {
+            // If particle's lifetime is over, erase it and update the iterator
+            particle = g_BloodSplatters.erase(particle);
+        } else {
+            // If the particle is active, render it
+            float lifePercent = particle->lifetime / particle->max_lifetime;
+            float fadeAlpha = 1.0f - lifePercent; // Fade out over time
+            float currentSize = particle->size * (0.1f + pow(lifePercent, 0.5f) * 1.0f); // Grow and then fade
             
-            if (particle->lifetime >= particle->max_lifetime) {
-                particle = g_BloodSplatters.erase(particle);
-            } else {
-                float lifePercent = particle->lifetime / particle->max_lifetime;
-                float fadeAlpha = 1.0f - lifePercent;
-                float currentSize = particle->size * (0.1f + pow(lifePercent, 0.5f) * 1.0f);
-                
-                glm::vec4 look = glm::vec4(camera_position - particle->position, 0.0f)/norm(glm::vec4(camera_position - particle->position, 0.0f));
-                glm::vec4 right = (crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look))/norm(crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look));
-                glm::vec4 up = (crossproduct(look, right))/norm(crossproduct(look, right));
+            // --- Billboard Logic (to make the 2D quad always face the camera) ---
+            glm::vec4 look = glm::normalize(glm::vec4(camera_position - particle->position, 0.0f));
+            glm::vec4 right = glm::normalize(crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look));
+            glm::vec4 up = glm::normalize(crossproduct(look, right));
 
-                // Aplica rotação aleatória ao plano do splatter
-                float c = cos(particle->rotation);
-                float s = sin(particle->rotation);
+            // Apply a random rotation to the particle's plane
+            float c = cos(particle->rotation);
+            float s = sin(particle->rotation);
+            glm::vec4 right_rot = right * c + up * s;
+            glm::vec4 up_rot = up * c - right * s;
 
-                // Rotaciona right e up em torno do vetor look
-                glm::vec4 right_rot = right * c + up * s;
-                glm::vec4 up_rot = up * c - right * s;
-
-                glm::mat4 bloodModel = Matrix_Translate(particle->position.x, particle->position.y, particle->position.z);
-                bloodModel[0] = glm::vec4(right_rot * currentSize);
-                bloodModel[1] = glm::vec4(up_rot * currentSize);
-                bloodModel[2] = glm::vec4(look * 0.1f);                
-                
-
-                glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
-                
-                // Renderiza com transparência
-                glDepthMask(GL_FALSE);
-                glDisable(GL_DEPTH_TEST);
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                
-                glUniform1i(g_object_id_uniform, BLOOD_SPLATTER);
-                glUniform1f(g_blood_alpha_uniform, fadeAlpha);
-
-                // Similar a muzzle flash
-                float half_size = currentSize / 2.0f;
-                float vertices[] = {
-                    -half_size, -half_size, 0.0f, 0.0f, 0.0f,  // bottom-left: UV = 0,0
-                    half_size, -half_size, 0.0f, 1.0f, 0.0f,   // bottom-right: UV = 1,0
-                    half_size, half_size, 0.0f, 1.0f, 1.0f,    // top-right: UV = 1,1
-                    -half_size, half_size, 0.0f, 0.0f, 1.0f    // top-left: UV = 0,1
-                };
-                
-                GLuint VAO, VBO;
-                glGenVertexArrays(1, &VAO);
-                glGenBuffers(1, &VBO);
-                
-                glBindVertexArray(VAO);
-                glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-                
-                // Atributo position
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-                glEnableVertexAttribArray(0);
-                // Atributo de coordenadas de textura
-                glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-                glEnableVertexAttribArray(2);
+            // Create the model matrix for the particle
+            glm::mat4 bloodModel = Matrix_Translate(particle->position.x, particle->position.y, particle->position.z);
+            bloodModel[0] = glm::vec4(right_rot * currentSize);
+            bloodModel[1] = glm::vec4(up_rot * currentSize);
+            bloodModel[2] = glm::vec4(look * 0.1f); // Small depth to avoid z-fighting
             
-                GLuint indices[] = {0, 1, 2, 0, 2, 3};
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, indices);
-                
-                glDeleteVertexArrays(1, &VAO);
-                glDeleteBuffers(1, &VBO);
-                
-                glEnable(GL_DEPTH_TEST);
-                glDepthMask(GL_TRUE);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                
-                particle++;
-            }
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
+            
+            // --- Set Render State for Transparency ---
+            glDepthMask(GL_FALSE); // Don't write to depth buffer
+            glDisable(GL_DEPTH_TEST); // Particles can draw over each other
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            
+            glUniform1i(g_object_id_uniform, BLOOD_SPLATTER);
+            glUniform1f(g_blood_alpha_uniform, fadeAlpha);
+
+            // --- Create and Draw the Particle Quad ---
+            float half_size = currentSize / 2.0f;
+            float vertices[] = {
+                // Positions          // Texture Coords
+            -half_size, -half_size, 0.0f, 0.0f, 0.0f,  // Bottom-left
+                half_size, -half_size, 0.0f, 1.0f, 0.0f,  // Bottom-right
+                half_size,  half_size, 0.0f, 1.0f, 1.0f,  // Top-right
+            -half_size,  half_size, 0.0f, 0.0f, 1.0f   // Top-left
+            };
+            
+            GLuint indices[] = {0, 1, 2, 2, 3, 0};
+
+            GLuint VAO, VBO, EBO;
+            glGenVertexArrays(1, &VAO);
+            glGenBuffers(1, &VBO);
+            glGenBuffers(1, &EBO);
+            
+            glBindVertexArray(VAO);
+            
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+            
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+            
+            // Position attribute
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
+            // Texture coord attribute
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+            glEnableVertexAttribArray(2);
+            
+            // Draw the particle
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
+            
+            // --- Clean up ---
+            glDeleteVertexArrays(1, &VAO);
+            glDeleteBuffers(1, &VBO);
+            glDeleteBuffers(1, &EBO);
+            
+            // --- Restore Render State ---
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_TRUE);
+            
+            // Increment the iterator manually since we didn't erase
+            particle++;
         }
+    }
 
         // Remove enemies with health <= 0
         g_Enemies.erase(std::remove_if(g_Enemies.begin(), g_Enemies.end(), [](const Enemy& enemy) {
@@ -1473,7 +1470,6 @@ int main(int argc, char* argv[])
             float age = currentTime - projectile.creation_time;
             float fade_alpha = 1.0f - (age / Physics::PROJECTILE_LIFETIME);
 
-            //glDisable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             
@@ -1510,15 +1506,11 @@ int main(int argc, char* argv[])
             glLineWidth(1.0f);
             
             glDisable(GL_BLEND);
-            //glEnable(GL_DEPTH_TEST);
         }
-
-        
 
         // Desenha a crosshair 2D no centro da tela
         glDisable(GL_DEPTH_TEST);
         
-
         // Desenha a crosshair 2D no centro da tela
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
@@ -2232,8 +2224,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-// Replace the CursorPosCallback function with this updated version:
-
+// Feito com ajuda de IA
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     // Calculate mouse movement since last frame
@@ -2327,16 +2318,16 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     float delta = 3.141592 / 16; // 22.5 graus, em radianos.
 
     // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    /*if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
         g_ForearmAngleX = 0.0f;
         g_ForearmAngleZ = 0.0f;
         g_TorsoPositionX = 0.0f;
         g_TorsoPositionY = 0.0f;
-    }
+    }*/
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
-    if (key == GLFW_KEY_P && action == GLFW_PRESS)
+    /*if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
         g_UsePerspectiveProjection = true;
     }
@@ -2345,7 +2336,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_O && action == GLFW_PRESS)
     {
         g_UsePerspectiveProjection = false;
-    }
+    }*/
 
     // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
     if (key == GLFW_KEY_H && action == GLFW_PRESS)
@@ -2353,6 +2344,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_ShowInfoText = !g_ShowInfoText;
     }
 
+    // Recarrega munição
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
     {
         Ammo = 30; // Recarrega munição
@@ -2366,9 +2358,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         fflush(stdout);
     }
 
+    // Alterna entre mostrar e ocultar as hitboxes
     if (key == GLFW_KEY_Z && action == GLFW_PRESS)
     {
-        ShowHitBoxes = !ShowHitBoxes; // Alterna entre mostrar e ocultar as hitboxes
+        ShowHitBoxes = !ShowHitBoxes; 
     }
 
 }
@@ -2379,46 +2372,8 @@ void ErrorCallback(int error, const char* description)
     fprintf(stderr, "ERROR: GLFW: %s\n", description);
 }
 
-/*void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
-{
-    float velocity = 5 * g_CameraSpeed * deltaTime;
 
-    // Character's local axes
-    // A direção "forward" do personagem vem do ângulo da câmera
-    glm::vec3 forward = glm::vec3(sin(g_CameraTheta), 0.0f,cos(g_CameraTheta));
-    glm::vec3 right   = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        character_position += forward * velocity;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        character_position -= forward * velocity;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        character_position -= right * velocity;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        character_position += right * velocity;
-
-     // feito no deepseek   
-     // Pulo (somente quando grounded)
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
-    {
-        g_CharacterVerticalVelocity = JUMP_FORCE;
-        g_IsCharacterGrounded = false;
-    }
-    // Gravidade
-    g_CharacterVerticalVelocity += GRAVITY * deltaTime;
-    
-    // Update vertical position
-    character_position.y += g_CharacterVerticalVelocity * deltaTime;
-
-    // Simple ground collision (y = 0 is ground level)
-    if (character_position.y <= 0.0f)
-    {
-        character_position.y = 0.0f;
-        g_CharacterVerticalVelocity = 0.0f;
-        g_IsCharacterGrounded = true;
-    }   
-}*/
-
+// Corrigido com ajuda de IA
 void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
     // --- 1. Calculate desired movement from input and apply gravity ---
@@ -2601,6 +2556,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
     TextRendering_PrintString(window, buffer, 1.0f-(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
 }
 
+// Mostra a munição no canto inferior esquerdo
 void TextRendering_ShowAmmo(GLFWwindow* window)
 {
     if ( !g_ShowInfoText )
@@ -2617,6 +2573,7 @@ void TextRendering_ShowAmmo(GLFWwindow* window)
     TextRendering_PrintString(window, buffer, 1.0f-24*charwidth, -1.0f+3*lineheight, 2.0f);
 }
 
+// Mostra o número de eliminações em cima da tela
 void TextRendering_ShowKills(GLFWwindow* window)
 {
     if ( !g_ShowInfoText )
@@ -2633,6 +2590,7 @@ void TextRendering_ShowKills(GLFWwindow* window)
     TextRendering_PrintString(window, buffer, 0.0f-15*charwidth, 1.0f-5*lineheight, 2.0f);
 }
 
+// Mostra que o usuário precisa recarregar quando a munição for 0
 void TextRendering_ShowReload(GLFWwindow* window)
 {
     if ( !g_ShowInfoText )
@@ -2883,7 +2841,4 @@ void PrintObjModelInfo(ObjModel* model)
     printf("\n");
   }
 }
-
-// set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
-// vim: set spell spelllang=pt_br :
 
