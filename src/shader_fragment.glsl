@@ -24,7 +24,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-// variavel para projetil
+// Variavel para projetil e sangue
 uniform float projectile_alpha;
 uniform float blood_alpha;
 
@@ -94,6 +94,7 @@ uniform sampler2D TextureImage22;
 uniform sampler2D TextureImage23;
 uniform sampler2D TextureImage24;
 
+// Variáveis para tratar do muzzle
 uniform bool muzzle_flash_active;
 uniform vec3 muzzle_flash_position;
 uniform vec3 muzzle_flash_color;

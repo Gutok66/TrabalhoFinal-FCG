@@ -5,9 +5,8 @@
 #include <cmath>
 #include <iostream>
 
-
+// Diz para o compilador que essas variáveis são definidas na main
 extern std::vector<BloodSplatter> g_BloodSplatters;
-// This tells the compiler that g_BarricadePositions is defined in another file (main.cpp)
 extern std::vector<glm::vec3> g_BarricadePositions;
 extern std::vector<float> g_BarricadeRotation;
 glm::vec3 barricade_bbox_min;
@@ -16,7 +15,7 @@ glm::vec3 barricade_bbox_max;
 extern std::vector<glm::vec3> g_CarPositions;
 extern std::vector<float> g_CarRotation;
 
-// --- Variable Definitions ---
+// Definição de variáveis
 float Physics::GRAVITY = -9.8f;
 float Physics::JUMP_FORCE = 5.0f;
 float Physics::PROJECTILE_LIFETIME = 1.0f;
@@ -26,8 +25,7 @@ std::vector<Projectile> Physics::Projectiles;
 float Physics::CharacterVerticalVelocity = 0.0f;
 bool Physics::IsCharacterGrounded = true;
 
-// --- Function Implementations ---
-
+// Funções
 void Physics::Initialize() {
     Physics::Projectiles.clear();
     Physics::CharacterVerticalVelocity = 0.0f;
@@ -43,18 +41,16 @@ Physics::Hitbox Physics::CAR_TOP_HITBOX = {glm::vec3(0.0f, 1.2f, -0.6f), glm::ve
 
 void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {
 
-    // --- WALL COLLISION ---
-    // Clamp X coordinate
+    
+    // Colisão personagem e paredes
     if (character_position.x > WorldBounds::MaxX - 0.5f) character_position.x = WorldBounds::MaxX - 0.5f;
     if (character_position.x < WorldBounds::MinX + 0.5f) character_position.x = WorldBounds::MinX + 0.5f;
 
-    // Clamp Z coordinate
     if (character_position.z > WorldBounds::MaxZ - 0.5f) character_position.z = WorldBounds::MaxZ - 0.5f;
     if (character_position.z < WorldBounds::MinZ + 0.5f) character_position.z = WorldBounds::MinZ + 0.5f;
 }
 
 void Physics::UpdateProjectiles(float currentTime) {
-    // We only remove projectiles based on their lifetime.
     for (auto it = Physics::Projectiles.begin(); it != Physics::Projectiles.end(); ) {
         if ((currentTime - it->creation_time) > Physics::PROJECTILE_LIFETIME) {
             it = Physics::Projectiles.erase(it);
@@ -64,6 +60,7 @@ void Physics::UpdateProjectiles(float currentTime) {
     }
 }
 
+// Feito com ajuda de IA
 void Physics::HandleShooting(const glm::vec3& character_position,
                              const glm::vec4& camera_position_c,
                              const glm::vec4& camera_view_vector,
@@ -81,7 +78,6 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     float hit_distance; // Reusable variable for distance checks
 
     // --- Check all 6 planes of the world box ---
-
     // Ground (y=0)
     if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, WorldBounds::MinY, 0), glm::vec3(0, 1, 0), hit_distance)) {
         closest_hit_distance = std::min(closest_hit_distance, hit_distance);
@@ -106,9 +102,6 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     if (Physics::RayIntersectsPlane(projectile_start, projectile_direction, glm::vec3(0, 0, WorldBounds::MaxZ), glm::vec3(0, 0, -1), hit_distance)) {
         closest_hit_distance = std::min(closest_hit_distance, hit_distance);
     }
-
-    //barricade_bbox_min = glm::vec3(-1.0000, -1.0000, -1.0000); 
-    //barricade_bbox_max = glm::vec3(2.8668, 1.0000, 1.0000); 
 
     glm::vec3 box_size = barricade_bbox_max - barricade_bbox_min;
     glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
@@ -153,7 +146,6 @@ void Physics::HandleShooting(const glm::vec3& character_position,
         if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_BODY_HITBOX.offset, ENEMY_BODY_HITBOX.size, enemy.model_matrix, body_hit_distance)) {
             if (body_hit_distance < closest_hit_distance) {
                 closest_hit_distance = body_hit_distance;
-                // You can add logic here to know you hit the body and apply 40 damage
                 enemy.health -= 40;
                 printf("Hit enemy body! Remaining health: %d\n", enemy.health);
                 // Add blood splatter effect
@@ -172,7 +164,6 @@ void Physics::HandleShooting(const glm::vec3& character_position,
         if (RayIntersectsOBB(projectile_start, projectile_direction, ENEMY_LEGS_HITBOX.offset, ENEMY_LEGS_HITBOX.size, enemy.model_matrix, pants_hit_distance)) {
             if (pants_hit_distance < closest_hit_distance) {
                 closest_hit_distance = pants_hit_distance;
-                // You can add logic here to know you hit the legs and apply 20 damage
                 enemy.health -= 20;
                 printf("Hit enemy legs! Remaining health: %d\n", enemy.health);
                 // Add blood splatter effect
@@ -235,8 +226,7 @@ void Physics::HandleShooting(const glm::vec3& character_position,
         new_projectile.start_position = character_position + glm::vec3(rot * glm::vec4(barrel_offset, 0.0f));
         printf("Third person barrel position: (%.2f, %.2f, %.2f)\n", new_projectile.start_position.x, new_projectile.start_position.y, new_projectile.start_position.z);
     }
-    //new_projectile.start_position = projectile_start + projectile_direction * 1.0f;
-    
+
     
     if(closest_hit_distance <= norm(camera_position_c - glm::vec4(new_projectile.start_position, 0.0f))) {
         new_projectile.end_position = new_projectile.start_position;
@@ -291,7 +281,7 @@ bool Physics::RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction,
     return false;
 }
 
-// In collision.cpp, with the other collision functions
+// Feito com ajuda de IA (eu acho)
 bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
                                  glm::vec3 plane_point, glm::vec3 plane_normal,
                                  float& hit_distance) {
@@ -313,6 +303,7 @@ bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
     return false;
 }
 
+// Feito com ajuda de IA
 bool Physics::RayIntersectsOBB(glm::vec3 ray_origin, glm::vec3 ray_direction, 
                                 glm::vec3 box_center_offset, glm::vec3 box_size, glm::mat4 model_matrix, 
                                 float& hit_distance) {

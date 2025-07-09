@@ -2438,13 +2438,29 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
         for (size_t i = 0; i < g_CarPositions.size(); ++i)
         {
             glm::mat4 car_model_matrix = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
-            
-            CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, g_CarBboxMin, g_CarBboxMax);
 
-            if (info.hasCollided && glm::length(info.mtv) < 1.0f) // SAFETY CHECK: Ignore huge MTVs
+            // --- Check against the bottom hitbox ---
+            glm::vec3 bottom_min_local = Physics::CAR_BOTTOM_HITBOX.offset - Physics::CAR_BOTTOM_HITBOX.size * 0.5f;
+            glm::vec3 bottom_max_local = Physics::CAR_BOTTOM_HITBOX.offset + Physics::CAR_BOTTOM_HITBOX.size * 0.5f;
+            CollisionInfo bottom_info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, bottom_min_local, bottom_max_local);
+
+            if (bottom_info.hasCollided && glm::length(bottom_info.mtv) < 1.0f)
             {
-                character_position += info.mtv;
-                if (info.mtv.y > 0.001f) {
+                character_position += bottom_info.mtv;
+                if (bottom_info.mtv.y > 0.001f) {
+                    g_IsCharacterGrounded = true;
+                }
+            }
+
+            // --- Check against the top hitbox ---
+            glm::vec3 top_min_local = Physics::CAR_TOP_HITBOX.offset - Physics::CAR_TOP_HITBOX.size * 0.5f;
+            glm::vec3 top_max_local = Physics::CAR_TOP_HITBOX.offset + Physics::CAR_TOP_HITBOX.size * 0.5f;
+            CollisionInfo top_info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, top_min_local, top_max_local);
+
+            if (top_info.hasCollided && glm::length(top_info.mtv) < 1.0f)
+            {
+                character_position += top_info.mtv;
+                if (top_info.mtv.y > 0.001f) {
                     g_IsCharacterGrounded = true;
                 }
             }

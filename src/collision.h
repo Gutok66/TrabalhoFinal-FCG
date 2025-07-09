@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include "enemy.h"
 
+// Struct que armazena informações pros projéteis
 struct Projectile {
     glm::vec3 start_position;
     glm::vec3 end_position;
