@@ -507,6 +507,99 @@ bool Check2DAABBvsOBBCollision(
 
     return true; // No separating axis found, they overlap
 }
+// A struct to hold information about a collision
+struct CollisionInfo
+{
+    bool hasCollided = false;
+    glm::vec3 mtv = glm::vec3(0.0f); // Minimum Translation Vector to resolve the collision
+};
+
+// New, verified collision detection function for AABB vs OBB
+CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerMax, const glm::mat4& barricadeTransform, const glm::vec3& barricadeMinLocal, const glm::vec3& barricadeMaxLocal)
+{
+    // Get world-space properties of both boxes
+    const glm::vec3 playerHalfExtents = (playerMax - playerMin) / 2.0f;
+    const glm::vec3 playerCenter = playerMin + playerHalfExtents;
+
+    const glm::vec3 barricadeHalfExtentsLocal = (barricadeMaxLocal - barricadeMinLocal) / 2.0f;
+    const glm::vec3 barricadeCenter = glm::vec3(barricadeTransform * glm::vec4((barricadeMinLocal + barricadeMaxLocal) / 2.0f, 1.0f));
+
+    // OBB orientation axes (normalized direction vectors)
+    glm::vec3 obbAxes[3] = {
+        glm::normalize(glm::vec3(barricadeTransform[0])),
+        glm::normalize(glm::vec3(barricadeTransform[1])),
+        glm::normalize(glm::vec3(barricadeTransform[2]))
+    };
+
+    // OBB scaled half-extents (size along each of its axes)
+    glm::vec3 obbScaledHalfExtents = {
+        glm::length(glm::vec3(barricadeTransform[0])) * barricadeHalfExtentsLocal.x,
+        glm::length(glm::vec3(barricadeTransform[1])) * barricadeHalfExtentsLocal.y,
+        glm::length(glm::vec3(barricadeTransform[2])) * barricadeHalfExtentsLocal.z
+    };
+
+    // AABB orientation axes (world axes)
+    glm::vec3 playerAxes[3] = {
+        glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)
+    };
+
+    // --- Separating Axis Theorem (SAT) ---
+    // We must test 15 axes for separation
+    glm::vec3 axesToTest[15];
+    int axisCount = 0;
+    for (int i = 0; i < 3; i++) axesToTest[axisCount++] = playerAxes[i];
+    for (int i = 0; i < 3; i++) axesToTest[axisCount++] = obbAxes[i];
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            axesToTest[axisCount++] = glm::cross(playerAxes[i], obbAxes[j]);
+        }
+    }
+
+    float minOverlap = std::numeric_limits<float>::max();
+    glm::vec3 smallestAxis;
+    glm::vec3 centerToCenter = barricadeCenter - playerCenter;
+
+    for (int i = 0; i < axisCount; i++) {
+        glm::vec3 axis = axesToTest[i];
+        if (glm::dot(axis, axis) < 0.0001f) continue; // Skip zero-length axes
+        axis = glm::normalize(axis);
+
+        // Project both boxes onto the current axis
+        float rA = playerHalfExtents.x * glm::abs(glm::dot(axis, playerAxes[0])) +
+                   playerHalfExtents.y * glm::abs(glm::dot(axis, playerAxes[1])) +
+                   playerHalfExtents.z * glm::abs(glm::dot(axis, playerAxes[2]));
+
+        float rB = obbScaledHalfExtents.x * glm::abs(glm::dot(axis, obbAxes[0])) +
+                   obbScaledHalfExtents.y * glm::abs(glm::dot(axis, obbAxes[1])) +
+                   obbScaledHalfExtents.z * glm::abs(glm::dot(axis, obbAxes[2]));
+
+        float distance = glm::abs(glm::dot(centerToCenter, axis));
+
+        if (distance > rA + rB) {
+            // A separating axis was found, there is no collision
+            return {}; // Return default (hasCollided = false)
+        }
+
+        // This is not a separating axis, calculate the overlap
+        float overlap = (rA + rB) - distance;
+        if (overlap < minOverlap) {
+            minOverlap = overlap;
+            smallestAxis = axis;
+        }
+    }
+
+    // No separating axis was found, a collision has occurred
+    CollisionInfo result;
+    result.hasCollided = true;
+    
+    // Ensure the MTV always pushes the player away from the barricade
+    if (glm::dot(centerToCenter, smallestAxis) > 0) {
+        smallestAxis = -smallestAxis;
+    }
+    
+    result.mtv = smallestAxis * minOverlap;
+    return result;
+}
 
 int main(int argc, char* argv[])
 {
@@ -2173,107 +2266,73 @@ void ErrorCallback(int error, const char* description)
 
 void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
-    // === 1. HORIZONTAL MOVEMENT & COLLISION ===
-    glm::vec3 previous_position = character_position;
-
-    float velocity = 5 * g_CameraSpeed * deltaTime;
+    // --- 1. Calculate desired movement from input and apply gravity ---
+    glm::vec3 move_vector(0.0f);
+    float speed = 5.0f;
     glm::vec3 forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
     glm::vec3 right   = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        character_position += forward * velocity;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        character_position -= forward * velocity;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        character_position -= right * velocity;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        character_position += right * velocity;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) move_vector += forward;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) move_vector -= forward;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_vector -= right;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_vector += right;
 
-    glm::vec3 player_bbox_min_horiz = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
-    glm::vec3 player_bbox_max_horiz = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
-
-    for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
+    if (glm::length(move_vector) > 0.0f)
     {
-        glm::mat4 barricade_model_matrix =
-            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
-            Matrix_Rotate_Y(g_BarricadeRotation[i]) *
-            Matrix_Scale(1.2f, 1.2f, 1.2f);
-
-        glm::vec3 local_box_center = (barricade_bbox_min + barricade_bbox_max) / 2.0f;
-        glm::vec3 obb_center = glm::vec3(barricade_model_matrix * glm::vec4(local_box_center, 1.0f));
-        glm::vec3 obb_half_extents = ((barricade_bbox_max - barricade_bbox_min) / 2.0f) * 1.2f;
-
-        if (CheckAABBvsOBBCollision(player_bbox_min_horiz, player_bbox_max_horiz, obb_center, obb_half_extents, barricade_model_matrix))
-        {
-            character_position = previous_position;
-            break;
-        }
+        move_vector = glm::normalize(move_vector) * speed;
     }
 
-    // === 2. VERTICAL MOVEMENT (GRAVITY & JUMP) ===
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
     {
         g_CharacterVerticalVelocity = JUMP_FORCE;
     }
-
-    g_IsCharacterGrounded = false;
-    g_CharacterVerticalVelocity += GRAVITY * deltaTime;
     
-    glm::vec3 potential_position = character_position;
-    potential_position.y += g_CharacterVerticalVelocity * deltaTime;
+    g_CharacterVerticalVelocity += GRAVITY * deltaTime;
+    move_vector.y = g_CharacterVerticalVelocity;
 
-    glm::vec3 player_bbox_min_pot = potential_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
-    glm::vec3 player_bbox_max_pot = potential_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+    // Apply the combined movement vector
+    character_position += move_vector * deltaTime;
 
-    // === 3. VERTICAL COLLISION DETECTION & RESPONSE ===
-    for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
+    // --- 2. Iteratively resolve all collisions (floor and objects) ---
+    g_IsCharacterGrounded = false;
+    for (int iter = 0; iter < 10; ++iter) // More iterations improve stability in complex corners
     {
-        glm::mat4 barricade_model_matrix =
-            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
-            Matrix_Rotate_Y(g_BarricadeRotation[i]) *
-            Matrix_Scale(1.2f, 1.2f, 1.2f);
-            
-        glm::vec3 local_box_center = (barricade_bbox_min + barricade_bbox_max) / 2.0f;
-        glm::vec3 obb_center = glm::vec3(barricade_model_matrix * glm::vec4(local_box_center, 1.0f));
-        glm::vec3 obb_half_extents = ((barricade_bbox_max - barricade_bbox_min) / 2.0f) * 1.2f;
-
-        bool xz_overlap = Check2DAABBvsOBBCollision(player_bbox_min_pot, player_bbox_max_pot, obb_center, obb_half_extents, barricade_model_matrix);
-
-        // Define the 8 corners of the barricade's local AABB
-        glm::vec3 corners[8] = {
-            glm::vec3(barricade_bbox_min.x, barricade_bbox_min.y, barricade_bbox_min.z),
-            glm::vec3(barricade_bbox_max.x, barricade_bbox_min.y, barricade_bbox_min.z),
-            glm::vec3(barricade_bbox_max.x, barricade_bbox_max.y, barricade_bbox_min.z),
-            glm::vec3(barricade_bbox_min.x, barricade_bbox_max.y, barricade_bbox_min.z),
-            glm::vec3(barricade_bbox_min.x, barricade_bbox_min.y, barricade_bbox_max.z),
-            glm::vec3(barricade_bbox_max.x, barricade_bbox_min.y, barricade_bbox_max.z),
-            glm::vec3(barricade_bbox_max.x, barricade_bbox_max.y, barricade_bbox_max.z),
-            glm::vec3(barricade_bbox_min.x, barricade_bbox_max.y, barricade_bbox_max.z)
-        };
-
-        glm::vec3 world_barricade_max(std::numeric_limits<float>::min());
-        for (int j = 0; j < 8; ++j) {
-            glm::vec4 transformed_corner = barricade_model_matrix * glm::vec4(corners[j], 1.0f);
-            world_barricade_max = glm::max(world_barricade_max, glm::vec3(transformed_corner));
-        }
-        float barricade_top_y = world_barricade_max.y;
-
-        if (xz_overlap && character_position.y >= barricade_top_y && potential_position.y < barricade_top_y)
-        {
-            potential_position.y = barricade_top_y;
-            g_CharacterVerticalVelocity = 0.0f;
+        // Check for collision with the floor
+        if (character_position.y < 0.0f) {
+            character_position.y = 0.0f;
             g_IsCharacterGrounded = true;
-            break;
+        }
+
+        // Define the player's current bounding box
+        glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+        glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+        
+        // Check for collisions with all barricades
+        for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
+        {
+            glm::mat4 barricade_model_matrix =
+                Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
+                Matrix_Rotate_Y(g_BarricadeRotation[i]) *
+                Matrix_Scale(1.2f, 1.2f, 1.2f);
+            
+            CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, barricade_model_matrix, barricade_bbox_min, barricade_bbox_max);
+
+            if (info.hasCollided)
+            {
+                // Push the character out of the object by the minimum amount needed
+                character_position += info.mtv;
+                
+                // If the primary push-back direction is upwards, we are standing on something
+                if (info.mtv.y > 0.0f) {
+                    g_IsCharacterGrounded = true;
+                }
+            }
         }
     }
-    
-    character_position = potential_position;
 
-    if (!g_IsCharacterGrounded && character_position.y <= 0.0f)
-    {
-        character_position.y = 0.0f;
+    // After all resolution, if we are on a surface, reset vertical velocity
+    if (g_IsCharacterGrounded) {
         g_CharacterVerticalVelocity = 0.0f;
-        g_IsCharacterGrounded = true;
     }
 }
 
