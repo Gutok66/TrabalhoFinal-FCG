@@ -217,10 +217,6 @@ glm::vec3 g_PlayerSize = glm::vec3(0.6f, 1.8f, 0.6f);
 glm::vec3 g_EnemyPhysicsBboxMin;
 glm::vec3 g_EnemyPhysicsBboxMax;
 
-// Variáveis para hitbox com carro
-glm::vec3 g_CarBboxMin;
-glm::vec3 g_CarBboxMax;
-
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
 // objetos dentro da variável g_VirtualScene, e veja na função main() como
@@ -338,7 +334,7 @@ int window_height = 600.0f;
 #define COVERED_CAR 29
 
 
-// Função para calcular um ponto na curva de Bezier cúbica
+// Função para calcular um ponto na curva de Bezier cúbica, feito com IA
 glm::vec3 CalculateBezierPoint(float t, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
     float u = 1.0f - t;
     float tt = t * t;
@@ -365,7 +361,6 @@ void GenerateBezierCurve(Enemy& enemy) {
     enemy.p2 = enemy.p3 + glm::vec3(((rand() % 100) - 50) / 10.0f, 0.0f, ((rand() % 100) - 50) / 10.0f);
 
     // Garante que os pontos estejam dentro dos limites
-    // Clamping individual components is safer than trying to clamp the entire vec3
     enemy.p0.x = glm::clamp(enemy.p0.x, -19.0f, 19.0f);
     enemy.p0.y = glm::clamp(enemy.p0.y, 0.0f, 0.0f);
     enemy.p0.z = glm::clamp(enemy.p0.z, -19.0f, 19.0f);
@@ -717,20 +712,6 @@ int main(int argc, char* argv[])
     ObjModel car("../../data/covered_car_1k.obj");
     ComputeNormals(&car);
     BuildTrianglesAndAddToVirtualScene(&car);
-
-    // Feito com ajuda de IA
-    // --- Calculate a single bounding box for the entire car model ---
-    g_CarBboxMin = glm::vec3(std::numeric_limits<float>::max());
-    g_CarBboxMax = glm::vec3(std::numeric_limits<float>::min());
-    for (const auto& shape : car.shapes) {
-        const auto& scene_obj = g_VirtualScene[shape.name];
-        g_CarBboxMin.x = std::min(g_CarBboxMin.x, scene_obj.bbox_min.x);
-        g_CarBboxMin.y = std::min(g_CarBboxMin.y, scene_obj.bbox_min.y);
-        g_CarBboxMin.z = std::min(g_CarBboxMin.z, scene_obj.bbox_min.z);
-        g_CarBboxMax.x = std::max(g_CarBboxMax.x, scene_obj.bbox_max.x);
-        g_CarBboxMax.y = std::max(g_CarBboxMax.y, scene_obj.bbox_max.y);
-        g_CarBboxMax.z = std::max(g_CarBboxMax.z, scene_obj.bbox_max.z);
-    }
 
     const auto& car_obj = g_VirtualScene[car.shapes[1].name];
 
@@ -1195,8 +1176,6 @@ int main(int argc, char* argv[])
         model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
 
-
-        // Feito com ajuda de IA
         // Atualiza e renderiza os inimigos
         for (auto& enemy : g_Enemies)
         {
@@ -1204,7 +1183,7 @@ int main(int argc, char* argv[])
                 Kills++;
                 continue; // Skip dead enemies
             }
-
+            // Feito com ajuda de IA
             // --- 1. Enemy AI Movement ---
             // The AI calculates where the enemy wants to go
             enemy.bezier_t += deltaTime * enemy.speed;
@@ -1224,24 +1203,19 @@ int main(int argc, char* argv[])
             // Define the player's bounding box
             glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
             glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
-            
             CollisionInfo player_collision = FindCollision(player_bbox_min, player_bbox_max, enemy_model_matrix, g_EnemyPhysicsBboxMin, g_EnemyPhysicsBboxMax);
-            
-            // --- 3. Player Death Mechanic ---
+            // Morte do inimigo
+            // Fim do trecho com IA
             if (player_collision.hasCollided) {
-                // Teleport player to the center of the map, high in the air
+                // Teleporta player para o centro do mapa no ar
                 character_position = glm::vec3(0.0f, 3.0f, 0.0f);
-                // Reset vertical velocity for a clean fall
                 g_CharacterVerticalVelocity = 0.0f;
                 // reseta eliminações e munição
                 Kills = 0; 
                 Ammo = 30;
             }
-
-            // --- 4. Update Model Matrix and Render ---
             model = Matrix_Translate(enemy.position.x, enemy.position.y, enemy.position.z) * Matrix_Rotate_Y(angle);
             enemy.model_matrix = model;
-
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             for (size_t i = 0; i < enemymodel.shapes.size(); ++i) {
                 glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
@@ -2163,9 +2137,10 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-// Modificado com ajuda de IA
+
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
+    // Modificado com ajuda de IA
     // Calculate mouse movement since last frame
     static bool first_mouse = true;
     if (first_mouse)
@@ -2284,7 +2259,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) move_vector -= forward;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_vector -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_vector += right;
-    if (glm::length(move_vector) > 0.0f) {
+    if (norm(glm::vec4(move_vector, 0.0)) > 0.0f) {
         move_vector = glm::normalize(move_vector) * speed;
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded) {
