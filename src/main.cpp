@@ -263,9 +263,7 @@ std::vector<float> g_CarRotation; // Rotação do carro
 
 int Ammo = 30; // Total de munição disponível
 int Kills = 0; // Total de Eliminações
-// Variáveis que controlam rotação do antebraço
-float g_ForearmAngleZ = 0.0f;
-float g_ForearmAngleX = 0.0f;
+
 bool ShowHitBoxes = false;
 
 // Variáveis de recuo
@@ -273,10 +271,6 @@ glm::vec3 g_RecoilOffset = glm::vec3(0.0f);
 float g_RecoilTimer = 0.0f;
 const float RECOIL_DURATION = 0.3f;
 const float RECOIL_STRENGTH = 0.1f;
-
-// Variáveis que controlam translação do torso
-float g_TorsoPositionX = 0.0f;
-float g_TorsoPositionY = 0.0f;
 
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
@@ -400,45 +394,37 @@ bool CheckAABBvsOBBCollision(
     // Get properties of both boxes
     glm::vec3 aabb_half_extents = (aabb_max - aabb_min) / 2.0f;
     glm::vec3 aabb_center = aabb_min + aabb_half_extents;
-
     // Get the axes of the OBB from its transformation matrix
     glm::vec3 obb_axes[3] = {
         glm::normalize(glm::vec3(obb_transform[0])),
         glm::normalize(glm::vec3(obb_transform[1])),
         glm::normalize(glm::vec3(obb_transform[2]))
     };
-
     // Get the world axes (for the AABB)
     glm::vec3 aabb_axes[3] = {
         glm::vec3(1.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(0.0f, 0.0f, 1.0f)
     };
-
     // Vector from the center of the AABB to the center of the OBB
     glm::vec3 to_center = obb_center - aabb_center;
-
     // --- Test all 15 potential separating axes ---
-
     // 1. Test the 3 axes of the AABB
     for (int i = 0; i < 3; ++i) {
         float rA = aabb_half_extents[i];
         float rB = obb_half_extents.x * glm::abs(glm::dot(aabb_axes[i], obb_axes[0])) +
                    obb_half_extents.y * glm::abs(glm::dot(aabb_axes[i], obb_axes[1])) +
                    obb_half_extents.z * glm::abs(glm::dot(aabb_axes[i], obb_axes[2]));
-
         if (glm::abs(glm::dot(to_center, aabb_axes[i])) > rA + rB) {
             return false; // Found a separating axis
         }
     }
-
     // 2. Test the 3 axes of the OBB
     for (int i = 0; i < 3; ++i) {
         float rA = aabb_half_extents.x * glm::abs(glm::dot(obb_axes[i], aabb_axes[0])) +
                    aabb_half_extents.y * glm::abs(glm::dot(obb_axes[i], aabb_axes[1])) +
                    aabb_half_extents.z * glm::abs(glm::dot(obb_axes[i], aabb_axes[2]));
         float rB = obb_half_extents[i];
-
         if (glm::abs(glm::dot(to_center, obb_axes[i])) > rA + rB) {
             return false; // Found a separating axis
         }
@@ -479,9 +465,7 @@ bool Check2DAABBvsOBBCollision(
     glm::vec2 aabb_max_2d(aabb_max.x, aabb_max.z);
     glm::vec2 aabb_half_extents_2d = (aabb_max_2d - aabb_min_2d) / 2.0f;
     glm::vec2 aabb_center_2d = aabb_min_2d + aabb_half_extents_2d;
-
     glm::vec2 obb_center_2d(obb_center.x, obb_center.z);
-
     // Get the 2D axes of the OBB from its transformation matrix (on the XZ plane)
     // We only care about the X and Z axes for the footprint.
     glm::vec2 obb_axes_2d[2] = {
@@ -489,12 +473,9 @@ bool Check2DAABBvsOBBCollision(
         glm::normalize(glm::vec2(obb_transform[2].x, obb_transform[2].z))  // OBB's local Z axis
     };
     glm::vec2 obb_half_extents_2d(obb_half_extents.x, obb_half_extents.z);
-
     glm::vec2 to_center = obb_center_2d - aabb_center_2d;
-
     // AABB's axes (world X and Z)
     glm::vec2 aabb_axes_2d[2] = { glm::vec2(1, 0), glm::vec2(0, 1) };
-
     // Test AABB's axes
     for (int i = 0; i < 2; ++i) {
         float rA = aabb_half_extents_2d[i];
@@ -502,7 +483,6 @@ bool Check2DAABBvsOBBCollision(
                    obb_half_extents_2d.y * glm::abs(glm::dot(aabb_axes_2d[i], obb_axes_2d[1]));
         if (glm::abs(glm::dot(to_center, aabb_axes_2d[i])) > rA + rB) return false;
     }
-
     // Test OBB's axes
     for (int i = 0; i < 2; ++i) {
         float rA = aabb_half_extents_2d.x * glm::abs(glm::dot(obb_axes_2d[i], aabb_axes_2d[0])) +
@@ -510,7 +490,6 @@ bool Check2DAABBvsOBBCollision(
         float rB = obb_half_extents_2d[i];
         if (glm::abs(glm::dot(to_center, obb_axes_2d[i])) > rA + rB) return false;
     }
-
     return true; // No separating axis found, they overlap
 }
 // feito com ajuda de IA
@@ -755,11 +734,6 @@ int main(int argc, char* argv[])
 
     const auto& car_obj = g_VirtualScene[car.shapes[1].name];
 
-    printf("\n--- BARRICADE BOUNDING BOX ---\n");
-    printf("BBox Min: (%.4f, %.4f, %.4f)\n", car_obj.bbox_min.x, car_obj.bbox_min.y, car_obj.bbox_min.z);
-    printf("BBox Max: (%.4f, %.4f, %.4f)\n", car_obj.bbox_max.x, car_obj.bbox_max.y, car_obj.bbox_max.z);
-    printf("----------------------------\n\n");
-
     ObjModel barricade("../../data/concrete_barrier.obj");
     ComputeNormals(&barricade);
     BuildTrianglesAndAddToVirtualScene(&barricade);
@@ -770,11 +744,6 @@ int main(int argc, char* argv[])
     const auto& scene_obj = g_VirtualScene[barricade.shapes[1].name];
     barricade_bbox_min = scene_obj.bbox_min;
     barricade_bbox_max = scene_obj.bbox_max;
-
-    printf("\n--- BARRICADE BOUNDING BOX ---\n");
-    printf("BBox Min: (%.4f, %.4f, %.4f)\n", barricade_bbox_min.x, barricade_bbox_min.y, barricade_bbox_min.z);
-    printf("BBox Max: (%.4f, %.4f, %.4f)\n", barricade_bbox_max.x, barricade_bbox_max.y, barricade_bbox_max.z);
-    printf("----------------------------\n\n");
 
     ObjModel player("../../data/character.obj");
     ComputeNormals(&player);
@@ -972,17 +941,14 @@ int main(int argc, char* argv[])
 
         Physics::ApplyPlayerPhysics(character_position);
 
-        // Feito com ajuda de IA (eu acho)
+        // if else do muzzle flash feito com IA
         if (g_MuzzleFlash.active) {
             g_MuzzleFlash.lifetime += deltaTime;
-            
             // Calculate fade factor (1.0 to 0.0)
             float fadeFactor = 1.0f - (g_MuzzleFlash.lifetime / g_MuzzleFlash.max_lifetime);
-            
             if (g_MuzzleFlash.lifetime >= g_MuzzleFlash.max_lifetime) {
                 g_MuzzleFlash.active = false;
             }
-            
             // Pass values to shader
             glUniform1i(g_muzzle_flash_active_uniform, g_MuzzleFlash.active ? 1 : 0);
             glUniform3fv(g_muzzle_flash_position_uniform, 1, glm::value_ptr(g_MuzzleFlash.position));
@@ -1283,7 +1249,7 @@ int main(int argc, char* argv[])
             }
             
             if (ShowHitBoxes) {
-            // Draw the three separate hitboxes used for shooting
+            // Desenha as hitboxes do inimigo
             DrawBoundingBox(Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
                         Physics::ENEMY_LEGS_HITBOX.offset + Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
                         model, view, projection);
@@ -1364,97 +1330,94 @@ int main(int argc, char* argv[])
             glDepthMask(GL_TRUE);
         }
 
-        // Corrigido com IA
+        // Loop for para renderizar particulas Feito com ajuda de IA
         for (auto particle = g_BloodSplatters.begin(); particle != g_BloodSplatters.end(); ) {
-        particle->lifetime += deltaTime;
-        
-        if (particle->lifetime >= particle->max_lifetime) {
-            // If particle's lifetime is over, erase it and update the iterator
-            particle = g_BloodSplatters.erase(particle);
-        } else {
-            // If the particle is active, render it
-            float lifePercent = particle->lifetime / particle->max_lifetime;
-            float fadeAlpha = 1.0f - lifePercent; // Fade out over time
-            float currentSize = particle->size * (0.1f + pow(lifePercent, 0.5f) * 1.0f); // Grow and then fade
+            particle->lifetime += deltaTime;
             
-            // --- Billboard Logic (to make the 2D quad always face the camera) ---
-            glm::vec4 look = glm::normalize(glm::vec4(camera_position - particle->position, 0.0f));
-            glm::vec4 right = glm::normalize(crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look));
-            glm::vec4 up = glm::normalize(crossproduct(look, right));
+            if (particle->lifetime >= particle->max_lifetime) {
+                particle = g_BloodSplatters.erase(particle);
+            } else {
+                float lifePercent = particle->lifetime / particle->max_lifetime;
+                float fadeAlpha = 1.0f - lifePercent; // Fade out 
+                float currentSize = particle->size * (0.1f + pow(lifePercent, 0.5f) * 1.0f); // Cresce quadraticamente
+                
+                // --- Billboard Logic (to make the 2D quad always face the camera) ---
+                glm::vec4 look = (glm::vec4(camera_position - particle->position, 0.0f))/norm(glm::vec4(camera_position - particle->position, 0.0f));
+                glm::vec4 right = (crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look))/norm(crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look));
+                glm::vec4 up = (crossproduct(look, right))/norm(crossproduct(look, right));
 
-            // Apply a random rotation to the particle's plane
-            float c = cos(particle->rotation);
-            float s = sin(particle->rotation);
-            glm::vec4 right_rot = right * c + up * s;
-            glm::vec4 up_rot = up * c - right * s;
+                // Apply a random rotation to the particle's plane
+                float c = cos(particle->rotation);
+                float s = sin(particle->rotation);
+                glm::vec4 right_rot = right * c + up * s;
+                glm::vec4 up_rot = up * c - right * s;
 
-            // Create the model matrix for the particle
-            glm::mat4 bloodModel = Matrix_Translate(particle->position.x, particle->position.y, particle->position.z);
-            bloodModel[0] = glm::vec4(right_rot * currentSize);
-            bloodModel[1] = glm::vec4(up_rot * currentSize);
-            bloodModel[2] = glm::vec4(look * 0.1f); // Small depth to avoid z-fighting
-            
-            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
-            
-            // --- Set Render State for Transparency ---
-            glDepthMask(GL_FALSE); // Don't write to depth buffer
-            glDisable(GL_DEPTH_TEST); // Particles can draw over each other
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            
-            glUniform1i(g_object_id_uniform, BLOOD_SPLATTER);
-            glUniform1f(g_blood_alpha_uniform, fadeAlpha);
+                // Create the model matrix for the particle
+                glm::mat4 bloodModel = Matrix_Translate(particle->position.x, particle->position.y, particle->position.z);
+                bloodModel[0] = glm::vec4(right_rot * currentSize);
+                bloodModel[1] = glm::vec4(up_rot * currentSize);
+                bloodModel[2] = glm::vec4(look * 0.1f); // Small depth to avoid z-fighting
+                
+                glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
+                
+                // --- Set Render State for Transparency ---
+                glDepthMask(GL_FALSE); // Don't write to depth buffer
+                glDisable(GL_DEPTH_TEST); // Particles can draw over each other
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                
+                glUniform1i(g_object_id_uniform, BLOOD_SPLATTER);
+                glUniform1f(g_blood_alpha_uniform, fadeAlpha);
 
-            // --- Create and Draw the Particle Quad ---
-            float half_size = currentSize / 2.0f;
-            float vertices[] = {
-                // Positions          // Texture Coords
-            -half_size, -half_size, 0.0f, 0.0f, 0.0f,  // Bottom-left
-                half_size, -half_size, 0.0f, 1.0f, 0.0f,  // Bottom-right
-                half_size,  half_size, 0.0f, 1.0f, 1.0f,  // Top-right
-            -half_size,  half_size, 0.0f, 0.0f, 1.0f   // Top-left
-            };
-            
-            GLuint indices[] = {0, 1, 2, 2, 3, 0};
+                // --- Create and Draw the Particle Quad ---
+                float half_size = currentSize / 2.0f;
+                float vertices[] = {
+                    // Positions          // Texture Coords
+                -half_size, -half_size, 0.0f, 0.0f, 0.0f,  // Bottom-left
+                    half_size, -half_size, 0.0f, 1.0f, 0.0f,  // Bottom-right
+                    half_size,  half_size, 0.0f, 1.0f, 1.0f,  // Top-right
+                -half_size,  half_size, 0.0f, 0.0f, 1.0f   // Top-left
+                };
+                
+                GLuint indices[] = {0, 1, 2, 2, 3, 0};
 
-            GLuint VAO, VBO, EBO;
-            glGenVertexArrays(1, &VAO);
-            glGenBuffers(1, &VBO);
-            glGenBuffers(1, &EBO);
-            
-            glBindVertexArray(VAO);
-            
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-            
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-            
-            // Position attribute
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-            glEnableVertexAttribArray(0);
-            // Texture coord attribute
-            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-            glEnableVertexAttribArray(2);
-            
-            // Draw the particle
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
-            
-            // --- Clean up ---
-            glDeleteVertexArrays(1, &VAO);
-            glDeleteBuffers(1, &VBO);
-            glDeleteBuffers(1, &EBO);
-            
-            // --- Restore Render State ---
-            glEnable(GL_DEPTH_TEST);
-            glDepthMask(GL_TRUE);
-            
-            // Increment the iterator manually since we didn't erase
-            particle++;
+                GLuint VAO, VBO, EBO;
+                glGenVertexArrays(1, &VAO);
+                glGenBuffers(1, &VBO);
+                glGenBuffers(1, &EBO);
+                
+                glBindVertexArray(VAO);
+                
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+                
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+                
+                // Position attribute
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+                // Texture coord attribute
+                glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+                glEnableVertexAttribArray(2);
+                
+                // Draw the particle
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
+                
+                // --- Clean up ---
+                glDeleteVertexArrays(1, &VAO);
+                glDeleteBuffers(1, &VBO);
+                glDeleteBuffers(1, &EBO);
+                
+                // --- Restore Render State ---
+                glEnable(GL_DEPTH_TEST);
+                glDepthMask(GL_TRUE);
+                
+                // Increment the iterator manually since we didn't erase
+                particle++;
+            }
         }
-    }
 
-        // Remove enemies with health <= 0
         g_Enemies.erase(std::remove_if(g_Enemies.begin(), g_Enemies.end(), [](const Enemy& enemy) {
             return enemy.health <= 0;
         }), g_Enemies.end());
@@ -2161,24 +2124,15 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
             
             
             if (FirstPerson) {
-                
-                // Convert the camera view direction to world space
                 glm::vec3 forward = glm::vec3(cos(g_CameraPhi)*sin(g_CameraTheta), -sin(g_CameraPhi), cos(g_CameraPhi)*cos(g_CameraTheta));
-                
-                // Position the muzzle flash at the gun position + offset in the view direction
-                // In MouseButtonCallback when firing in first person
-                g_MuzzleFlash.position = character_position + 
-                                        glm::vec3(0.0f, camera_height, 0.0f) + 
-                                        forward * 0.5f +  // Increased from 0.5f to 0.7f to push it forward
-                                        glm::vec3(0.0f, -0.1f, 0.0f);
+                // Posiciona o muzzle flash na ponta da arma com offset
+                g_MuzzleFlash.position = character_position + glm::vec3(0.0f, camera_height, 0.0f) + forward * 0.5f +  glm::vec3(0.0f, -0.1f, 0.0f);
             } else {
-                // Keep your existing third-person calculation
                 glm::vec3 gunOffset = glm::vec3(-0.05f, 1.55f, 1.0f);
                 glm::mat4 gunTransform = Matrix_Translate(g_RecoilOffset.x, g_RecoilOffset.y, g_RecoilOffset.z) 
                             * Matrix_Translate(character_position.x, character_position.y, character_position.z) 
                             * Matrix_Rotate_Y(g_CameraTheta);
                             
-                // Transform gun offset to world space
                 glm::vec4 worldMuzzlePos = gunTransform * glm::vec4(gunOffset, 1.0f);
                 g_MuzzleFlash.position = glm::vec3(worldMuzzlePos);
             }
@@ -2224,7 +2178,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-// Feito com ajuda de IA
+// Modificado com ajuda de IA
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     // Calculate mouse movement since last frame
@@ -2236,38 +2190,18 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         first_mouse = false;
     }
 
-    // Always update camera based on mouse movement (remove the button press condition)
     float dx = xpos - g_LastCursorPosX;
     float dy = ypos - g_LastCursorPosY;
 
-    // Update camera parameters with mouse movement
     g_CameraTheta -= 0.01f*dx;
     g_CameraPhi   += 0.01f*dy;
 
-    // Clamp phi angle to prevent camera flipping
     float phimax = glm::radians(75.0f);
     float phimin = glm::radians(-75.0f);
     g_CameraPhi = glm::clamp(g_CameraPhi, phimin, phimax);
 
-    // Update last cursor position
     g_LastCursorPosX = xpos;
     g_LastCursorPosY = ypos;
-
-    // Keep the right mouse button functionality for forearm control
-    if (g_RightMouseButtonPressed)
-    {
-        // Forearm angle control with right mouse button
-        g_ForearmAngleZ -= 0.01f*dx;
-        g_ForearmAngleX += 0.01f*dy;
-    }
-
-    // Keep the middle mouse button functionality for torso control
-    if (g_MiddleMouseButtonPressed)
-    {
-        // Torso position control with middle mouse button
-        g_TorsoPositionX += 0.01f*dx;
-        g_TorsoPositionY -= 0.01f*dy;
-    }
 }
 
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
@@ -2317,27 +2251,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     float delta = 3.141592 / 16; // 22.5 graus, em radianos.
 
-    // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
-    /*if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-    {
-        g_ForearmAngleX = 0.0f;
-        g_ForearmAngleZ = 0.0f;
-        g_TorsoPositionX = 0.0f;
-        g_TorsoPositionY = 0.0f;
-    }*/
-
-    // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
-    /*if (key == GLFW_KEY_P && action == GLFW_PRESS)
-    {
-        g_UsePerspectiveProjection = true;
-    }
-
-    // Se o usuário apertar a tecla O, utilizamos projeção ortográfica.
-    if (key == GLFW_KEY_O && action == GLFW_PRESS)
-    {
-        g_UsePerspectiveProjection = false;
-    }*/
-
     // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
     if (key == GLFW_KEY_H && action == GLFW_PRESS)
     {
@@ -2376,7 +2289,7 @@ void ErrorCallback(int error, const char* description)
 // Corrigido com ajuda de IA
 void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
-    // --- 1. Calculate desired movement from input and apply gravity ---
+    // Calculate desired movement from input and apply gravity 
     glm::vec3 move_vector(0.0f);
     float speed = 5.0f;
     glm::vec3 forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
@@ -2386,34 +2299,27 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) move_vector -= forward;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_vector -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_vector += right;
-
     if (glm::length(move_vector) > 0.0f) {
         move_vector = glm::normalize(move_vector) * speed;
     }
-
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded) {
         g_CharacterVerticalVelocity = JUMP_FORCE;
     }
-    
     g_CharacterVerticalVelocity += GRAVITY * deltaTime;
     move_vector.y = g_CharacterVerticalVelocity;
-
     // Apply the combined movement vector
     character_position += move_vector * deltaTime;
-
     // --- 2. Iteratively resolve all collisions with safety checks ---
     g_IsCharacterGrounded = false;
     for (int iter = 0; iter < 10; ++iter) 
     {
         glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
         glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
-
         // Check against the floor
         if (player_bbox_min.y < 0.0f) {
             character_position.y = 0.0f;
             g_IsCharacterGrounded = true;
         }
-        
         // Check for collisions with barricades
         for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
             glm::mat4 barricade_model_matrix = Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) * Matrix_Rotate_Y(g_BarricadeRotation[i]) * Matrix_Scale(1.2f, 1.2f, 1.2f);
@@ -2423,7 +2329,6 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
                 if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
             }
         }
-
         // Check for collisions with enemies
         for (auto& enemy : g_Enemies) {
             if (enemy.health <= 0) continue;
@@ -2439,12 +2344,10 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
         for (size_t i = 0; i < g_CarPositions.size(); ++i)
         {
             glm::mat4 car_model_matrix = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
-
             // --- Check against the bottom hitbox ---
             glm::vec3 bottom_min_local = Physics::CAR_BOTTOM_HITBOX.offset - Physics::CAR_BOTTOM_HITBOX.size * 0.5f;
             glm::vec3 bottom_max_local = Physics::CAR_BOTTOM_HITBOX.offset + Physics::CAR_BOTTOM_HITBOX.size * 0.5f;
             CollisionInfo bottom_info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, bottom_min_local, bottom_max_local);
-
             if (bottom_info.hasCollided && glm::length(bottom_info.mtv) < 1.0f)
             {
                 character_position += bottom_info.mtv;
@@ -2452,7 +2355,6 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
                     g_IsCharacterGrounded = true;
                 }
             }
-
             // --- Check against the top hitbox ---
             glm::vec3 top_min_local = Physics::CAR_TOP_HITBOX.offset - Physics::CAR_TOP_HITBOX.size * 0.5f;
             glm::vec3 top_max_local = Physics::CAR_TOP_HITBOX.offset + Physics::CAR_TOP_HITBOX.size * 0.5f;
@@ -2467,7 +2369,6 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
             }
         }
     }
-
     if (g_IsCharacterGrounded) {
         g_CharacterVerticalVelocity = 0.0f;
     }
@@ -2620,6 +2521,7 @@ void TextRendering_ShowReload(GLFWwindow* window)
         TextRendering_PrintString(window, "Press R to reload", 0.0f-12*charwidth, 0.0f+2*lineheight, 1.5f);
 }
 
+//Função feito com IA
 void DrawBoundingBox(const glm::vec3& bbox_min, const glm::vec3& bbox_max, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
 {
     // 8 vértices do cubo

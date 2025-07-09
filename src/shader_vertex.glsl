@@ -82,7 +82,7 @@ void main()
     gouraud_specular = vec3(0.0, 0.0, 0.0);
     gouraud_ambient = vec3(0.0, 0.0, 0.0);
     
-    // Se o objeto atual for a barricada, aplicamos o modelo de iluminação de Gouraud
+    // Se o objeto atual for a barricada, aplicamos o modelo de iluminação de Gouraud, feito com IA
     if (object_id == BARRICADE)
     {
         // Obtemos a posição da câmera utilizando a inversa da matriz view
