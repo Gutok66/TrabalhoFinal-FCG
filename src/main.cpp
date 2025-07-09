@@ -852,34 +852,7 @@ int main(int argc, char* argv[])
         g_EnemyPhysicsBboxMax,
         Physics::ENEMY_HEAD_HITBOX.offset + Physics::ENEMY_HEAD_HITBOX.size * 0.5f
     );
-for (int iter = 0; iter < 10; ++iter) 
-{
-    // ... (The existing code that checks for floor collision can stay)
 
-    glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
-    glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
-    
-    // --- This loop for barricades stays the same ---
-    for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
-    {
-        // ... existing barricade collision code ...
-    }
-
-    // +++ ADD THIS NEW LOOP FOR ENEMIES +++
-    for (auto& enemy : g_Enemies)
-    {
-        if (enemy.health <= 0) continue; // Skip dead enemies
-
-        CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, enemy.model_matrix, g_EnemyPhysicsBboxMin, g_EnemyPhysicsBboxMax);
-
-        if (info.hasCollided)
-        {
-            // Push the player and enemy apart by half the distance each
-            character_position += info.mtv * 0.5f;
-            enemy.position -= info.mtv * 0.5f;
-        }
-    }
-}
     ObjModel muzzleFlashModel("../../data/muzzleflash.obj");
     ComputeNormals(&muzzleFlashModel);
     BuildTrianglesAndAddToVirtualScene(&muzzleFlashModel);
@@ -1036,6 +1009,7 @@ for (int iter = 0; iter < 10; ++iter)
         if(FirstPerson){
             camera_position = character_position + glm::vec3(0.0f, camera_height, 0.0f);
         }
+
         glm::vec3 camera_lookat = character_position + character_front * target_distance + glm::vec3(0.0f, 1.0f - target_distance*look_vertical/2, 0.0f); // levemente para cima
 
         camera_position_c  = glm::vec4(camera_position,1.0f); // Ponto "c", centro da câmera
@@ -1048,8 +1022,10 @@ for (int iter = 0; iter < 10; ++iter)
         if(FirstPerson){
             view = Matrix_Camera_View(camera_position_c, g_CameraFront, camera_up_vector);
         }
+        
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
+
 
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
@@ -1078,6 +1054,7 @@ for (int iter = 0; iter < 10; ++iter)
         }
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
+        
         
 
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
@@ -1235,6 +1212,17 @@ for (int iter = 0; iter < 10; ++iter)
             DrawVirtualObject("pol_jaket_0");
         }
 
+        // mostra hitbox do player
+        if (ShowHitBoxes)
+            {
+                // Define the player's local bounding box based on its physics size
+                glm::vec3 player_local_bbox_min = glm::vec3(-g_PlayerSize.x / 2.0f, 0.0f, -g_PlayerSize.z / 2.0f);
+                glm::vec3 player_local_bbox_max = glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+                
+                // Draw the bounding box using the player's current transformation
+                DrawBoundingBox(player_local_bbox_min, player_local_bbox_max, model, view, projection);
+            }
+
 
         for (size_t i = 0; i < g_CarPositions.size(); ++i) {
             model = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
@@ -1260,47 +1248,67 @@ for (int iter = 0; iter < 10; ++iter)
 
         
         // Atualiza e renderiza os inimigos
-        for (auto& enemy : g_Enemies) {
-            if (enemy.health <= 0){
+        for (auto& enemy : g_Enemies)
+        {
+            if (enemy.health <= 0) {
                 Kills++;
-                continue; // Pula inimigos mortos
-            }    
-            // Atualiza a posição do inimigo ao longo da curva de Bezier
+                continue; // Skip dead enemies
+            }
+
+            // --- 1. Enemy AI Movement ---
+            // The AI calculates where the enemy wants to go
             enemy.bezier_t += deltaTime * enemy.speed;
             if (enemy.bezier_t >= 1.0f) {
                 enemy.bezier_t = 0.0f;
-                GenerateBezierCurve(enemy); // Gera uma nova curva quando a atual termina
+                GenerateBezierCurve(enemy);
             }
-            glm::vec3 new_position = CalculateBezierPoint(enemy.bezier_t, enemy.p0, enemy.p1, enemy.p2, enemy.p3);
+            glm::vec3 desired_position = CalculateBezierPoint(enemy.bezier_t, enemy.p0, enemy.p1, enemy.p2, enemy.p3);
+            enemy.position = desired_position;
 
-            // Calcula a direção do movimento
-            glm::vec4 direction = glm::vec4(new_position - enemy.position, 0.0f)/norm(glm::vec4(new_position - enemy.position, 0.0f));
-            enemy.position = new_position;
+            // --- 2. Check for Collision with Player ---
+            // Define the enemy's current transform for the collision check
+            glm::vec3 look_direction = CalculateBezierPoint(enemy.bezier_t + 0.01f, enemy.p0, enemy.p1, enemy.p2, enemy.p3) - enemy.position;
+            float angle = atan2(look_direction.x, look_direction.z);
+            glm::mat4 enemy_model_matrix = Matrix_Translate(enemy.position.x, enemy.position.y, enemy.position.z) * Matrix_Rotate_Y(angle);
 
-            // Calcula o ângulo de rotação para que o inimigo olhe na direção do movimento
-            float angle = atan2(direction.x, direction.z);
-            enemy.rotation_y = glm::degrees(angle);
+            // Define the player's bounding box
+            glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+            glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+            
+            CollisionInfo player_collision = FindCollision(player_bbox_min, player_bbox_max, enemy_model_matrix, g_EnemyPhysicsBboxMin, g_EnemyPhysicsBboxMax);
+            
+            // --- 3. Player Death Mechanic ---
+            if (player_collision.hasCollided) {
+                // Teleport player to the center of the map, high in the air
+                character_position = glm::vec3(0.0f, 3.0f, 0.0f);
+                // Reset vertical velocity for a clean fall
+                g_CharacterVerticalVelocity = 0.0f;
+                // reseta eliminações e munição
+                Kills = 0; 
+                Ammo = 30;
+            }
 
-            // Renderiza o inimigo na nova posição com a rotação correta
+            // --- 4. Update Model Matrix and Render ---
             model = Matrix_Translate(enemy.position.x, enemy.position.y, enemy.position.z) * Matrix_Rotate_Y(angle);
             enemy.model_matrix = model;
-            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             for (size_t i = 0; i < enemymodel.shapes.size(); ++i) {
                 glUniform1i(g_object_id_uniform, ENEMY_HEAD + i);
                 DrawVirtualObject(enemymodel.shapes[i].name.c_str());
             }
-            // Print the hitbox bounding boxes defined in collision.cpp
+            
             if (ShowHitBoxes) {
-                DrawBoundingBox(Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
-                            Physics::ENEMY_LEGS_HITBOX.offset + Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
-                            model, view, projection);
-                DrawBoundingBox(Physics::ENEMY_BODY_HITBOX.offset - Physics::ENEMY_BODY_HITBOX.size * 0.5f,
-                            Physics::ENEMY_BODY_HITBOX.offset + Physics::ENEMY_BODY_HITBOX.size * 0.5f,
-                            model, view, projection);
-                DrawBoundingBox(Physics::ENEMY_HEAD_HITBOX.offset - Physics::ENEMY_HEAD_HITBOX.size * 0.5f,
-                            Physics::ENEMY_HEAD_HITBOX.offset + Physics::ENEMY_HEAD_HITBOX.size * 0.5f,
-                            model, view, projection);
+            // Draw the three separate hitboxes used for shooting
+            DrawBoundingBox(Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+                        Physics::ENEMY_LEGS_HITBOX.offset + Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
+                        model, view, projection);
+            DrawBoundingBox(Physics::ENEMY_BODY_HITBOX.offset - Physics::ENEMY_BODY_HITBOX.size * 0.5f,
+                        Physics::ENEMY_BODY_HITBOX.offset + Physics::ENEMY_BODY_HITBOX.size * 0.5f,
+                        model, view, projection);
+            DrawBoundingBox(Physics::ENEMY_HEAD_HITBOX.offset - Physics::ENEMY_HEAD_HITBOX.size * 0.5f,
+                        Physics::ENEMY_HEAD_HITBOX.offset + Physics::ENEMY_HEAD_HITBOX.size * 0.5f,
+                        model, view, projection);
             }
         }
         
@@ -1541,7 +1549,7 @@ for (int iter = 0; iter < 10; ++iter)
         //TextRendering_ShowEulerAngles(window);
 
         // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
-        TextRendering_ShowProjection(window);
+        //TextRendering_ShowProjection(window);
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -2555,20 +2563,7 @@ void TextRendering_ShowModelViewProjection(
     TextRendering_PrintMatrixVectorProductMoreDigits(window, viewport_mapping, p_ndc, -1.0f, 1.0f-26*pad, 1.0f);
 }
 
-// Escrevemos na tela qual matriz de projeção está sendo utilizada.
-void TextRendering_ShowProjection(GLFWwindow* window)
-{
-    if ( !g_ShowInfoText )
-        return;
 
-    float lineheight = TextRendering_LineHeight(window);
-    float charwidth = TextRendering_CharWidth(window);
-
-    if ( g_UsePerspectiveProjection )
-        TextRendering_PrintString(window, "Perspective", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
-    else
-        TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
-}
 
 // Escrevemos na tela o número de quadros renderizados por segundo (frames per
 // second).
