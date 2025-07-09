@@ -464,6 +464,50 @@ bool CheckAABBvsOBBCollision(
     return true;
 }
 
+bool Check2DAABBvsOBBCollision(
+    const glm::vec3& aabb_min, const glm::vec3& aabb_max,
+    const glm::vec3& obb_center, const glm::vec3& obb_half_extents, const glm::mat4& obb_transform)
+{
+    // Use 2D vectors for easier calculations in the XZ plane
+    glm::vec2 aabb_min_2d(aabb_min.x, aabb_min.z);
+    glm::vec2 aabb_max_2d(aabb_max.x, aabb_max.z);
+    glm::vec2 aabb_half_extents_2d = (aabb_max_2d - aabb_min_2d) / 2.0f;
+    glm::vec2 aabb_center_2d = aabb_min_2d + aabb_half_extents_2d;
+
+    glm::vec2 obb_center_2d(obb_center.x, obb_center.z);
+
+    // Get the 2D axes of the OBB from its transformation matrix (on the XZ plane)
+    // We only care about the X and Z axes for the footprint.
+    glm::vec2 obb_axes_2d[2] = {
+        glm::normalize(glm::vec2(obb_transform[0].x, obb_transform[0].z)), // OBB's local X axis
+        glm::normalize(glm::vec2(obb_transform[2].x, obb_transform[2].z))  // OBB's local Z axis
+    };
+    glm::vec2 obb_half_extents_2d(obb_half_extents.x, obb_half_extents.z);
+
+    glm::vec2 to_center = obb_center_2d - aabb_center_2d;
+
+    // AABB's axes (world X and Z)
+    glm::vec2 aabb_axes_2d[2] = { glm::vec2(1, 0), glm::vec2(0, 1) };
+
+    // Test AABB's axes
+    for (int i = 0; i < 2; ++i) {
+        float rA = aabb_half_extents_2d[i];
+        float rB = obb_half_extents_2d.x * glm::abs(glm::dot(aabb_axes_2d[i], obb_axes_2d[0])) +
+                   obb_half_extents_2d.y * glm::abs(glm::dot(aabb_axes_2d[i], obb_axes_2d[1]));
+        if (glm::abs(glm::dot(to_center, aabb_axes_2d[i])) > rA + rB) return false;
+    }
+
+    // Test OBB's axes
+    for (int i = 0; i < 2; ++i) {
+        float rA = aabb_half_extents_2d.x * glm::abs(glm::dot(obb_axes_2d[i], aabb_axes_2d[0])) +
+                   aabb_half_extents_2d.y * glm::abs(glm::dot(obb_axes_2d[i], aabb_axes_2d[1]));
+        float rB = obb_half_extents_2d[i];
+        if (glm::abs(glm::dot(to_center, obb_axes_2d[i])) > rA + rB) return false;
+    }
+
+    return true; // No separating axis found, they overlap
+}
+
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -2129,12 +2173,10 @@ void ErrorCallback(int error, const char* description)
 
 void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
-    // Store position before applying movement for collision response
+    // === 1. HORIZONTAL MOVEMENT & COLLISION ===
     glm::vec3 previous_position = character_position;
 
     float velocity = 5 * g_CameraSpeed * deltaTime;
-
-    // Character's local axes
     glm::vec3 forward = glm::vec3(sin(g_CameraTheta), 0.0f, cos(g_CameraTheta));
     glm::vec3 right   = glm::vec3(-cos(g_CameraTheta), 0.0f, sin(g_CameraTheta));
 
@@ -2147,55 +2189,92 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         character_position += right * velocity;
 
-    // --- CHARACTER-BARRICADE COLLISION LOGIC ---
-    // Calculate player's world-space AABB based on the new potential position.
-    glm::vec3 player_bbox_min = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
-    glm::vec3 player_bbox_max = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+    glm::vec3 player_bbox_min_horiz = character_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+    glm::vec3 player_bbox_max_horiz = character_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
 
-    // Check for collision with each barricade
     for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
     {
-        // Get the barricade's model matrix
         glm::mat4 barricade_model_matrix =
             Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
             Matrix_Rotate_Y(g_BarricadeRotation[i]) *
             Matrix_Scale(1.2f, 1.2f, 1.2f);
 
-        // Define the barricade's OBB (Oriented Bounding Box) properties
         glm::vec3 local_box_center = (barricade_bbox_min + barricade_bbox_max) / 2.0f;
         glm::vec3 obb_center = glm::vec3(barricade_model_matrix * glm::vec4(local_box_center, 1.0f));
-        
-        // Half-extents are half the size, adjusted by the object's scale
         glm::vec3 obb_half_extents = ((barricade_bbox_max - barricade_bbox_min) / 2.0f) * 1.2f;
 
-        // Check for collision using the new, accurate function
-        if (CheckAABBvsOBBCollision(player_bbox_min, player_bbox_max, obb_center, obb_half_extents, barricade_model_matrix))
+        if (CheckAABBvsOBBCollision(player_bbox_min_horiz, player_bbox_max_horiz, obb_center, obb_half_extents, barricade_model_matrix))
         {
-            character_position = previous_position; // Collision detected! Revert to the position before movement.
-            break; // Stop checking other barricades for this frame.
+            character_position = previous_position;
+            break;
         }
     }
-    // --- END OF COLLISION LOGIC ---
 
-    // Pulo (somente quando grounded)
+    // === 2. VERTICAL MOVEMENT (GRAVITY & JUMP) ===
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded)
     {
         g_CharacterVerticalVelocity = JUMP_FORCE;
-        g_IsCharacterGrounded = false;
     }
-    // Gravidade
+
+    g_IsCharacterGrounded = false;
     g_CharacterVerticalVelocity += GRAVITY * deltaTime;
     
-    // Update vertical position
-    character_position.y += g_CharacterVerticalVelocity * deltaTime;
+    glm::vec3 potential_position = character_position;
+    potential_position.y += g_CharacterVerticalVelocity * deltaTime;
 
-    // Simple ground collision (y = 0 is ground level)
-    if (character_position.y <= 0.0f)
+    glm::vec3 player_bbox_min_pot = potential_position - glm::vec3(g_PlayerSize.x / 2.0f, 0.0f, g_PlayerSize.z / 2.0f);
+    glm::vec3 player_bbox_max_pot = potential_position + glm::vec3(g_PlayerSize.x / 2.0f, g_PlayerSize.y, g_PlayerSize.z / 2.0f);
+
+    // === 3. VERTICAL COLLISION DETECTION & RESPONSE ===
+    for (size_t i = 0; i < g_BarricadePositions.size(); ++i)
+    {
+        glm::mat4 barricade_model_matrix =
+            Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) *
+            Matrix_Rotate_Y(g_BarricadeRotation[i]) *
+            Matrix_Scale(1.2f, 1.2f, 1.2f);
+            
+        glm::vec3 local_box_center = (barricade_bbox_min + barricade_bbox_max) / 2.0f;
+        glm::vec3 obb_center = glm::vec3(barricade_model_matrix * glm::vec4(local_box_center, 1.0f));
+        glm::vec3 obb_half_extents = ((barricade_bbox_max - barricade_bbox_min) / 2.0f) * 1.2f;
+
+        bool xz_overlap = Check2DAABBvsOBBCollision(player_bbox_min_pot, player_bbox_max_pot, obb_center, obb_half_extents, barricade_model_matrix);
+
+        // Define the 8 corners of the barricade's local AABB
+        glm::vec3 corners[8] = {
+            glm::vec3(barricade_bbox_min.x, barricade_bbox_min.y, barricade_bbox_min.z),
+            glm::vec3(barricade_bbox_max.x, barricade_bbox_min.y, barricade_bbox_min.z),
+            glm::vec3(barricade_bbox_max.x, barricade_bbox_max.y, barricade_bbox_min.z),
+            glm::vec3(barricade_bbox_min.x, barricade_bbox_max.y, barricade_bbox_min.z),
+            glm::vec3(barricade_bbox_min.x, barricade_bbox_min.y, barricade_bbox_max.z),
+            glm::vec3(barricade_bbox_max.x, barricade_bbox_min.y, barricade_bbox_max.z),
+            glm::vec3(barricade_bbox_max.x, barricade_bbox_max.y, barricade_bbox_max.z),
+            glm::vec3(barricade_bbox_min.x, barricade_bbox_max.y, barricade_bbox_max.z)
+        };
+
+        glm::vec3 world_barricade_max(std::numeric_limits<float>::min());
+        for (int j = 0; j < 8; ++j) {
+            glm::vec4 transformed_corner = barricade_model_matrix * glm::vec4(corners[j], 1.0f);
+            world_barricade_max = glm::max(world_barricade_max, glm::vec3(transformed_corner));
+        }
+        float barricade_top_y = world_barricade_max.y;
+
+        if (xz_overlap && character_position.y >= barricade_top_y && potential_position.y < barricade_top_y)
+        {
+            potential_position.y = barricade_top_y;
+            g_CharacterVerticalVelocity = 0.0f;
+            g_IsCharacterGrounded = true;
+            break;
+        }
+    }
+    
+    character_position = potential_position;
+
+    if (!g_IsCharacterGrounded && character_position.y <= 0.0f)
     {
         character_position.y = 0.0f;
         g_CharacterVerticalVelocity = 0.0f;
         g_IsCharacterGrounded = true;
-    }   
+    }
 }
 
 // Esta função recebe um vértice com coordenadas de modelo p_model e passa o
