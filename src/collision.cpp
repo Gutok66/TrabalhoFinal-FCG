@@ -114,14 +114,22 @@ void Physics::HandleShooting(const glm::vec3& character_position,
     glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
 
     for (size_t i = 0; i < g_CarPositions.size(); ++i) {
-        // Reconstruct the model matrix for the car, just like in main.cpp
+        // Reconstruct the model matrix for the car
         glm::mat4 model_matrix = 
             Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
 
         float car_hit_distance;
-        if (Physics::RayIntersectsOBB(projectile_start, projectile_direction, box_center_offset, box_size, model_matrix, car_hit_distance)) {
+        // Check against the two hitboxes defined for the car
+        if (RayIntersectsOBB(projectile_start, projectile_direction, CAR_BOTTOM_HITBOX.offset, CAR_BOTTOM_HITBOX.size, model_matrix, car_hit_distance)) {
             if (car_hit_distance < closest_hit_distance) {
                 closest_hit_distance = car_hit_distance;
+                // You can add logic here for what happens when the car body is shot
+            }
+        }
+        if (RayIntersectsOBB(projectile_start, projectile_direction, CAR_TOP_HITBOX.offset, CAR_TOP_HITBOX.size, model_matrix, car_hit_distance)) {
+            if (car_hit_distance < closest_hit_distance) {
+                closest_hit_distance = car_hit_distance;
+                // You can add logic here for what happens when the car top/windows are shot
             }
         }
     }

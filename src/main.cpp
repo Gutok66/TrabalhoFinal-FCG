@@ -217,6 +217,10 @@ glm::vec3 g_PlayerSize = glm::vec3(0.6f, 1.8f, 0.6f);
 glm::vec3 g_EnemyPhysicsBboxMin;
 glm::vec3 g_EnemyPhysicsBboxMax;
 
+// vars para hitbox com carro
+glm::vec3 g_CarBboxMin;
+glm::vec3 g_CarBboxMax;
+
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
 // objetos dentro da variável g_VirtualScene, e veja na função main() como
@@ -740,6 +744,19 @@ int main(int argc, char* argv[])
     ObjModel car("../../data/covered_car_1k.obj");
     ComputeNormals(&car);
     BuildTrianglesAndAddToVirtualScene(&car);
+
+    // --- Calculate a single bounding box for the entire car model ---
+    g_CarBboxMin = glm::vec3(std::numeric_limits<float>::max());
+    g_CarBboxMax = glm::vec3(std::numeric_limits<float>::min());
+    for (const auto& shape : car.shapes) {
+        const auto& scene_obj = g_VirtualScene[shape.name];
+        g_CarBboxMin.x = std::min(g_CarBboxMin.x, scene_obj.bbox_min.x);
+        g_CarBboxMin.y = std::min(g_CarBboxMin.y, scene_obj.bbox_min.y);
+        g_CarBboxMin.z = std::min(g_CarBboxMin.z, scene_obj.bbox_min.z);
+        g_CarBboxMax.x = std::max(g_CarBboxMax.x, scene_obj.bbox_max.x);
+        g_CarBboxMax.y = std::max(g_CarBboxMax.y, scene_obj.bbox_max.y);
+        g_CarBboxMax.z = std::max(g_CarBboxMax.z, scene_obj.bbox_max.z);
+    }
 
     const auto& car_obj = g_VirtualScene[car.shapes[1].name];
 
@@ -2452,6 +2469,21 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
                 character_position += info.mtv * 0.5f;
                 enemy.position     -= info.mtv * 0.5f;
                 if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
+            }
+        }
+        // check colisão com carro
+        for (size_t i = 0; i < g_CarPositions.size(); ++i)
+        {
+            glm::mat4 car_model_matrix = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
+            
+            CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, g_CarBboxMin, g_CarBboxMax);
+
+            if (info.hasCollided && glm::length(info.mtv) < 1.0f) // SAFETY CHECK: Ignore huge MTVs
+            {
+                character_position += info.mtv;
+                if (info.mtv.y > 0.001f) {
+                    g_IsCharacterGrounded = true;
+                }
             }
         }
     }
