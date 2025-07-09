@@ -1,0 +1,18 @@
+# Blender 4.3.0 MTL File: 'covered_car_1k.blend'
+# www.blender.org
+
+newmtl covered_car
+Ks 0.300000 0.300000 0.300000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd textures/covered_car_diff_1k.jpg
+map_Pm textures/covered_car_metal_1k.exr
+map_Pr textures/covered_car_rough_1k.exr
+map_Bump -bm 1.000000 textures/covered_car_nor_gl_1k.exr

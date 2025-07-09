@@ -13,6 +13,8 @@ extern std::vector<float> g_BarricadeRotation;
 glm::vec3 barricade_bbox_min;
 glm::vec3 barricade_bbox_max;
 
+extern std::vector<glm::vec3> g_CarPositions;
+extern std::vector<float> g_CarRotation;
 
 // --- Variable Definitions ---
 float Physics::GRAVITY = -9.8f;
@@ -36,6 +38,8 @@ void Physics::Initialize() {
 Physics::Hitbox Physics::ENEMY_LEGS_HITBOX; //= {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
 Physics::Hitbox Physics::ENEMY_BODY_HITBOX; //= {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
 Physics::Hitbox Physics::ENEMY_HEAD_HITBOX; //= {glm::vec3(0.0f, 1.6f, 0.0f), glm::vec3(0.4f, 0.4f, 0.4f), 2.0f};
+Physics::Hitbox Physics::CAR_BOTTOM_HITBOX = {glm::vec3(0.0f, 0.5f, -0.0), glm::vec3(1.8f, 1.0, 4.4f), 1.0f};
+Physics::Hitbox Physics::CAR_TOP_HITBOX = {glm::vec3(0.0f, 1.2f, -0.6f), glm::vec3(1.6f, 0.4f, 2.6f), 0.0f};
 
 void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {
 
@@ -108,6 +112,19 @@ void Physics::HandleShooting(const glm::vec3& character_position,
 
     glm::vec3 box_size = barricade_bbox_max - barricade_bbox_min;
     glm::vec3 box_center_offset = (barricade_bbox_max + barricade_bbox_min) / 2.0f;
+
+    for (size_t i = 0; i < g_CarPositions.size(); ++i) {
+        // Reconstruct the model matrix for the car, just like in main.cpp
+        glm::mat4 model_matrix = 
+            Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
+
+        float car_hit_distance;
+        if (Physics::RayIntersectsOBB(projectile_start, projectile_direction, box_center_offset, box_size, model_matrix, car_hit_distance)) {
+            if (car_hit_distance < closest_hit_distance) {
+                closest_hit_distance = car_hit_distance;
+            }
+        }
+    }
 
     for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
         // Reconstruct the model matrix for the barricade, just like in main.cpp
