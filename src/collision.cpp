@@ -32,20 +32,17 @@ void Physics::Initialize() {
     Physics::IsCharacterGrounded = true;
 }
 
-// --- Hitbox Definitions ---
-Physics::Hitbox Physics::ENEMY_LEGS_HITBOX; //= {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
-Physics::Hitbox Physics::ENEMY_BODY_HITBOX; //= {glm::vec3(0.0f, 0.75f, 0.0f), glm::vec3(0.8f, 1.5f, 0.6f), 1.0f};
-Physics::Hitbox Physics::ENEMY_HEAD_HITBOX; //= {glm::vec3(0.0f, 1.6f, 0.0f), glm::vec3(0.4f, 0.4f, 0.4f), 2.0f};
-Physics::Hitbox Physics::CAR_BOTTOM_HITBOX = {glm::vec3(0.0f, 0.5f, -0.0), glm::vec3(1.8f, 1.0, 4.4f), 1.0f};
-Physics::Hitbox Physics::CAR_TOP_HITBOX = {glm::vec3(0.0f, 1.2f, -0.6f), glm::vec3(1.6f, 0.4f, 2.6f), 0.0f};
+Physics::Hitbox Physics::ENEMY_LEGS_HITBOX;
+Physics::Hitbox Physics::ENEMY_BODY_HITBOX; 
+Physics::Hitbox Physics::ENEMY_HEAD_HITBOX; 
+Physics::Hitbox Physics::CAR_BOTTOM_HITBOX = {glm::vec3(0.0f, 0.5f, -0.0), glm::vec3(1.8f, 1.0, 4.4f)};
+Physics::Hitbox Physics::CAR_TOP_HITBOX = {glm::vec3(0.0f, 1.2f, -0.6f), glm::vec3(1.6f, 0.4f, 2.6f)};
 
-void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {
-
-    
+void Physics::ApplyPlayerPhysics(glm::vec3& character_position) {   
     // Colisão personagem e paredes
     if (character_position.x > WorldBounds::MaxX - 0.5f) character_position.x = WorldBounds::MaxX - 0.5f;
     if (character_position.x < WorldBounds::MinX + 0.5f) character_position.x = WorldBounds::MinX + 0.5f;
-
+ 
     if (character_position.z > WorldBounds::MaxZ - 0.5f) character_position.z = WorldBounds::MaxZ - 0.5f;
     if (character_position.z < WorldBounds::MinZ + 0.5f) character_position.z = WorldBounds::MinZ + 0.5f;
 }

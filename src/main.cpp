@@ -1319,7 +1319,6 @@ int main(int argc, char* argv[])
             glDepthMask(GL_FALSE);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-            
             glDisable(GL_DEPTH_TEST);
             
             glUniform1i(g_object_id_uniform, MUZZLE_FLASH);
@@ -1333,33 +1332,28 @@ int main(int argc, char* argv[])
         // Loop for para renderizar particulas Feito com ajuda de IA
         for (auto particle = g_BloodSplatters.begin(); particle != g_BloodSplatters.end(); ) {
             particle->lifetime += deltaTime;
-            
             if (particle->lifetime >= particle->max_lifetime) {
                 particle = g_BloodSplatters.erase(particle);
             } else {
                 float lifePercent = particle->lifetime / particle->max_lifetime;
                 float fadeAlpha = 1.0f - lifePercent; // Fade out 
                 float currentSize = particle->size * (0.1f + pow(lifePercent, 0.5f) * 1.0f); // Cresce quadraticamente
-                
                 // --- Billboard Logic (to make the 2D quad always face the camera) ---
                 glm::vec4 look = (glm::vec4(camera_position - particle->position, 0.0f))/norm(glm::vec4(camera_position - particle->position, 0.0f));
                 glm::vec4 right = (crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look))/norm(crossproduct(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), look));
                 glm::vec4 up = (crossproduct(look, right))/norm(crossproduct(look, right));
-
                 // Apply a random rotation to the particle's plane
                 float c = cos(particle->rotation);
                 float s = sin(particle->rotation);
                 glm::vec4 right_rot = right * c + up * s;
                 glm::vec4 up_rot = up * c - right * s;
-
                 // Create the model matrix for the particle
                 glm::mat4 bloodModel = Matrix_Translate(particle->position.x, particle->position.y, particle->position.z);
                 bloodModel[0] = glm::vec4(right_rot * currentSize);
                 bloodModel[1] = glm::vec4(up_rot * currentSize);
                 bloodModel[2] = glm::vec4(look * 0.1f); // Small depth to avoid z-fighting
-                
+            
                 glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(bloodModel));
-                
                 // --- Set Render State for Transparency ---
                 glDepthMask(GL_FALSE); // Don't write to depth buffer
                 glDisable(GL_DEPTH_TEST); // Particles can draw over each other
@@ -1368,7 +1362,6 @@ int main(int argc, char* argv[])
                 
                 glUniform1i(g_object_id_uniform, BLOOD_SPLATTER);
                 glUniform1f(g_blood_alpha_uniform, fadeAlpha);
-
                 // --- Create and Draw the Particle Quad ---
                 float half_size = currentSize / 2.0f;
                 float vertices[] = {
@@ -1380,39 +1373,31 @@ int main(int argc, char* argv[])
                 };
                 
                 GLuint indices[] = {0, 1, 2, 2, 3, 0};
-
                 GLuint VAO, VBO, EBO;
                 glGenVertexArrays(1, &VAO);
                 glGenBuffers(1, &VBO);
                 glGenBuffers(1, &EBO);
                 
                 glBindVertexArray(VAO);
-                
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-                
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-                
                 // Position attribute
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
                 glEnableVertexAttribArray(0);
                 // Texture coord attribute
                 glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
                 glEnableVertexAttribArray(2);
-                
                 // Draw the particle
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
-                
                 // --- Clean up ---
                 glDeleteVertexArrays(1, &VAO);
                 glDeleteBuffers(1, &VBO);
                 glDeleteBuffers(1, &EBO);
-                
                 // --- Restore Render State ---
                 glEnable(GL_DEPTH_TEST);
                 glDepthMask(GL_TRUE);
-                
                 // Increment the iterator manually since we didn't erase
                 particle++;
             }

@@ -37,11 +37,10 @@ namespace Physics {
     extern float CharacterVerticalVelocity;
     extern bool IsCharacterGrounded;
 
-    // --- Enemy Configuration ---
+    // Hitbox
     struct Hitbox {
         glm::vec3 offset;
         glm::vec3 size;
-        float damage_multiplier;
     };
 
     extern Hitbox ENEMY_LEGS_HITBOX;
