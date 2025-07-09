@@ -2434,7 +2434,8 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
                 if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
             }
         }
-        // check colisão com carro
+        // Corrigido com IA
+        // Checa colisão com carro
         for (size_t i = 0; i < g_CarPositions.size(); ++i)
         {
             glm::mat4 car_model_matrix = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
