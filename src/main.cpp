@@ -253,6 +253,10 @@ glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
 std::vector<glm::vec3> g_BarricadePositions;
 std::vector<float> g_BarricadeRotation; // Rotação da barricada
+
+std::vector<glm::vec3> g_CarPositions;
+std::vector<float> g_CarRotation; // Rotação do carro
+
 int Ammo = 30; // Total de munição disponível
 int Kills = 0; // Total de Eliminações
 // Variáveis que controlam rotação do antebraço
@@ -333,6 +337,7 @@ int window_height = 600.0f;
 #define pol_pants 26
 #define MUZZLE_FLASH 27
 #define BLOOD_SPLATTER 28
+#define COVERED_CAR 29
 
 /*
 struct Enemy {
@@ -725,11 +730,23 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/textures/Image_35.png"); // TextureImage21
     LoadTextureImage("../../data/textures/muzzleflash.png"); // TextureImage22
     LoadTextureImage("../../data/textures/pngegg.png"); // TextureImage23
+    LoadTextureImage("../../data/textures/covered_car_diff_1k.jpg"); // TextureImage24
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
     ObjModel planemodel("../../data/plane.obj");
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
+
+    ObjModel car("../../data/covered_car_1k.obj");
+    ComputeNormals(&car);
+    BuildTrianglesAndAddToVirtualScene(&car);
+
+    const auto& car_obj = g_VirtualScene[car.shapes[1].name];
+
+    printf("\n--- BARRICADE BOUNDING BOX ---\n");
+    printf("BBox Min: (%.4f, %.4f, %.4f)\n", car_obj.bbox_min.x, car_obj.bbox_min.y, car_obj.bbox_min.z);
+    printf("BBox Max: (%.4f, %.4f, %.4f)\n", car_obj.bbox_max.x, car_obj.bbox_max.y, car_obj.bbox_max.z);
+    printf("----------------------------\n\n");
 
     ObjModel barricade("../../data/concrete_barrier.obj");
     ComputeNormals(&barricade);
@@ -756,6 +773,11 @@ int main(int argc, char* argv[])
     for (int i = 0; i < 20; i++) {
         g_BarricadePositions.push_back(glm::vec3(((rand() % 200) - 100) / 5.0f, 0.0f, ((rand() % 200) - 100) / 5.0f));
         g_BarricadeRotation.push_back(((rand() % 360) - 180) / 180.0f * 3.141592); // Rotação aleatória entre -180 e 180 graus
+    }
+    g_CarPositions.clear();
+    for (int i = 0; i < 5; i++) {
+        g_CarPositions.push_back(glm::vec3(((rand() % 180) - 90) / 5.0f, 0.0f, ((rand() % 180) - 90) / 5.0f));
+        g_CarRotation.push_back(((rand() % 360) - 180) / 180.0f * 3.141592); // Rotação aleatória entre -180 e 180 graus
     }
 
     ObjModel enemymodel("../../data/Soldier.obj");
@@ -1085,7 +1107,7 @@ for (int iter = 0; iter < 10; ++iter)
             }
         }
 
-        for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
+        for (size_t i = 0; i < g_BarricadePositions.size(); i++) {
             const auto& position = g_BarricadePositions[i];
             float rotation = g_BarricadeRotation[i];
 
@@ -1195,6 +1217,25 @@ for (int iter = 0; iter < 10; ++iter)
             glUniform1i(g_object_id_uniform, pol_jaket);
             DrawVirtualObject("pol_jaket_0");
         }
+
+
+        for (size_t i = 0; i < g_CarPositions.size(); ++i) {
+            model = Matrix_Translate(g_CarPositions[i].x, g_CarPositions[i].y, g_CarPositions[i].z) * Matrix_Rotate_Y(g_CarRotation[i]) * Matrix_Scale(1.25f, 1.25f, 1.25f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, COVERED_CAR);
+            for (size_t i = 0; i < car.shapes.size(); i++) {
+                DrawVirtualObject(car.shapes[i].name.c_str());
+            }
+            if (ShowHitBoxes) {
+                DrawBoundingBox(Physics::CAR_TOP_HITBOX.offset - Physics::CAR_TOP_HITBOX.size * 0.5f,
+                            Physics::CAR_TOP_HITBOX.offset + Physics::CAR_TOP_HITBOX.size * 0.5f,
+                            model, view, projection);
+                DrawBoundingBox(Physics::CAR_BOTTOM_HITBOX.offset - Physics::CAR_BOTTOM_HITBOX.size * 0.5f,
+                            Physics::CAR_BOTTOM_HITBOX.offset + Physics::CAR_BOTTOM_HITBOX.size * 0.5f,
+                            model, view, projection);
+            }
+        }
+
 
         model = Matrix_Translate(0.0, 0.0f, 1.0f)*Matrix_Scale(1.0f, 1.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -1671,6 +1712,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage21"), 21);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage22"), 22);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage23"), 23);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage24"), 24);
     glUseProgram(0);
 }
 

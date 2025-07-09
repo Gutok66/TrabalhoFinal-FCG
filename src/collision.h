@@ -46,6 +46,8 @@ namespace Physics {
     extern Hitbox ENEMY_LEGS_HITBOX;
     extern Hitbox ENEMY_BODY_HITBOX;
     extern Hitbox ENEMY_HEAD_HITBOX;
+    extern Hitbox CAR_BOTTOM_HITBOX;
+    extern Hitbox CAR_TOP_HITBOX;
 
     // --- Functions ---
     void Initialize();

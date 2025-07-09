@@ -60,6 +60,7 @@ uniform float blood_alpha;
 #define pol_pants 26
 #define MUZZLE_FLASH 27
 #define BLOOD_SPLATTER 28
+#define COVERED_CAR 29
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -91,6 +92,7 @@ uniform sampler2D TextureImage20;
 uniform sampler2D TextureImage21;
 uniform sampler2D TextureImage22;
 uniform sampler2D TextureImage23;
+uniform sampler2D TextureImage24;
 
 uniform bool muzzle_flash_active;
 uniform vec3 muzzle_flash_position;
@@ -556,6 +558,25 @@ void main()
         diffuse = vec4(texture_color.rgb, blood_alpha); // Yellow with fading alpha;
         ambient = vec4(0.0, 0.0, 0.0, 0.0);
         specular = vec4(0.0, 0.0, 0.0, 0.0);
+    }
+    else if( object_id == COVERED_CAR)
+    {
+        U = texcoords.x;
+        V = texcoords.y;
+        
+        // Sample the texture
+        vec4 texture_color = texture(TextureImage24, vec2(U,V));
+        
+        
+        vec3 Kd0 = texture(TextureImage24, vec2(U,V)).rgb;; // Quase sem cor
+        vec3 Ks0 = vec3(0.3, 0.3, 0.3); // Cor especular
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+        float Ns = 250; // Exponente especular
+
+        specular.rgb = Ks0 * pow(max(0, dot(n, h)), Ns);  // Componente especular usando Blinn-Phong
+        diffuse.rgb = Kd0 * lambert;
+        ambient.rgb = Kd0 * 0.1; // Ambiente com 10% da cor difusa
     }
     else if (object_id == -1)
     {
