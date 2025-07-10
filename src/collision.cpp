@@ -258,12 +258,12 @@ bool Physics::RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction,
 bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
                                  glm::vec3 plane_point, glm::vec3 plane_normal,
                                  float& hit_distance) {
-    float denominator = glm::dot(plane_normal, ray_direction);
+    float denominator = dotproduct3(plane_normal, ray_direction);
     // If the denominator is close to zero, the ray is parallel to the plane
     if (std::abs(denominator) < 0.0001f) {
         return false;
     }
-    float t = glm::dot(plane_point - ray_origin, plane_normal) / denominator;
+    float t = dotproduct3(plane_point - ray_origin, plane_normal) / denominator;
     // We only care about intersections in front of the ray
     if (t > 0.0f) {
         hit_distance = t;

@@ -391,9 +391,9 @@ bool CheckAABBvsOBBCollision(
     glm::vec3 aabb_center = aabb_min + aabb_half_extents;
     // Get the axes of the OBB from its transformation matrix
     glm::vec3 obb_axes[3] = {
-        glm::normalize(glm::vec3(obb_transform[0])),
-        glm::normalize(glm::vec3(obb_transform[1])),
-        glm::normalize(glm::vec3(obb_transform[2]))
+        glm::vec3(obb_transform[0])/norm(glm::vec4(glm::vec3(obb_transform[0]),0.0f)),
+        glm::vec3(obb_transform[1])/norm(glm::vec4(glm::vec3(obb_transform[1]),0.0f)),
+        glm::vec3(obb_transform[2])/norm(glm::vec4(glm::vec3(obb_transform[2]),0.0f))
     };
     // Get the world axes (for the AABB)
     glm::vec3 aabb_axes[3] = {
@@ -407,20 +407,20 @@ bool CheckAABBvsOBBCollision(
     // 1. Test the 3 axes of the AABB
     for (int i = 0; i < 3; ++i) {
         float rA = aabb_half_extents[i];
-        float rB = obb_half_extents.x * glm::abs(glm::dot(aabb_axes[i], obb_axes[0])) +
-                   obb_half_extents.y * glm::abs(glm::dot(aabb_axes[i], obb_axes[1])) +
-                   obb_half_extents.z * glm::abs(glm::dot(aabb_axes[i], obb_axes[2]));
-        if (glm::abs(glm::dot(to_center, aabb_axes[i])) > rA + rB) {
+        float rB = obb_half_extents.x * glm::abs(dotproduct3(aabb_axes[i], obb_axes[0])) +
+                   obb_half_extents.y * glm::abs(dotproduct3(aabb_axes[i], obb_axes[1])) +
+                   obb_half_extents.z * glm::abs(dotproduct3(aabb_axes[i], obb_axes[2]));
+        if (glm::abs(dotproduct3(to_center, aabb_axes[i])) > rA + rB) {
             return false; // Found a separating axis
         }
     }
     // 2. Test the 3 axes of the OBB
     for (int i = 0; i < 3; ++i) {
-        float rA = aabb_half_extents.x * glm::abs(glm::dot(obb_axes[i], aabb_axes[0])) +
-                   aabb_half_extents.y * glm::abs(glm::dot(obb_axes[i], aabb_axes[1])) +
-                   aabb_half_extents.z * glm::abs(glm::dot(obb_axes[i], aabb_axes[2]));
+        float rA = aabb_half_extents.x * glm::abs(dotproduct3(obb_axes[i], aabb_axes[0])) +
+                   aabb_half_extents.y * glm::abs(dotproduct3(obb_axes[i], aabb_axes[1])) +
+                   aabb_half_extents.z * glm::abs(dotproduct3(obb_axes[i], aabb_axes[2]));
         float rB = obb_half_extents[i];
-        if (glm::abs(glm::dot(to_center, obb_axes[i])) > rA + rB) {
+        if (glm::abs(dotproduct3(to_center, obb_axes[i])) > rA + rB) {
             return false; // Found a separating axis
         }
     }
@@ -428,18 +428,18 @@ bool CheckAABBvsOBBCollision(
     // 3. Test the 9 cross-product axes
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            glm::vec3 axis = glm::cross(aabb_axes[i], obb_axes[j]);
-            if (glm::dot(axis, axis) < 0.00001f) continue; // Skip near-parallel axes
+            glm::vec3 axis = crossproduct3(aabb_axes[i], obb_axes[j]);
+            if (dotproduct3(axis, axis) < 0.00001f) continue; // Skip near-parallel axes
 
-            float rA = aabb_half_extents.x * glm::abs(glm::dot(axis, aabb_axes[0])) +
-                       aabb_half_extents.y * glm::abs(glm::dot(axis, aabb_axes[1])) +
-                       aabb_half_extents.z * glm::abs(glm::dot(axis, aabb_axes[2]));
+            float rA = aabb_half_extents.x * glm::abs(dotproduct3(axis, aabb_axes[0])) +
+                       aabb_half_extents.y * glm::abs(dotproduct3(axis, aabb_axes[1])) +
+                       aabb_half_extents.z * glm::abs(dotproduct3(axis, aabb_axes[2]));
 
-            float rB = obb_half_extents.x * glm::abs(glm::dot(axis, obb_axes[0])) +
-                       obb_half_extents.y * glm::abs(glm::dot(axis, obb_axes[1])) +
-                       obb_half_extents.z * glm::abs(glm::dot(axis, obb_axes[2]));
+            float rB = obb_half_extents.x * glm::abs(dotproduct3(axis, obb_axes[0])) +
+                       obb_half_extents.y * glm::abs(dotproduct3(axis, obb_axes[1])) +
+                       obb_half_extents.z * glm::abs(dotproduct3(axis, obb_axes[2]));
 
-            if (glm::abs(glm::dot(to_center, axis)) > rA + rB) {
+            if (glm::abs(dotproduct3(to_center, axis)) > rA + rB) {
                 return false; // Found a separating axis
             }
         }
@@ -464,8 +464,8 @@ bool Check2DAABBvsOBBCollision(
     // Get the 2D axes of the OBB from its transformation matrix (on the XZ plane)
     // We only care about the X and Z axes for the footprint.
     glm::vec2 obb_axes_2d[2] = {
-        glm::normalize(glm::vec2(obb_transform[0].x, obb_transform[0].z)), // OBB's local X axis
-        glm::normalize(glm::vec2(obb_transform[2].x, obb_transform[2].z))  // OBB's local Z axis
+        glm::vec2(obb_transform[0].x, obb_transform[0].z)/norm(glm::vec4(obb_transform[0].x, obb_transform[0].z, 0.0f, 0.0f)), // OBB's local X axis
+        glm::vec2(obb_transform[2].x, obb_transform[2].z)/norm(glm::vec4(obb_transform[2].x, obb_transform[2].z, 0.0f, 0.0f))  // OBB's local Z axis
     };
     glm::vec2 obb_half_extents_2d(obb_half_extents.x, obb_half_extents.z);
     glm::vec2 to_center = obb_center_2d - aabb_center_2d;
@@ -474,16 +474,16 @@ bool Check2DAABBvsOBBCollision(
     // Test AABB's axes
     for (int i = 0; i < 2; ++i) {
         float rA = aabb_half_extents_2d[i];
-        float rB = obb_half_extents_2d.x * glm::abs(glm::dot(aabb_axes_2d[i], obb_axes_2d[0])) +
-                   obb_half_extents_2d.y * glm::abs(glm::dot(aabb_axes_2d[i], obb_axes_2d[1]));
-        if (glm::abs(glm::dot(to_center, aabb_axes_2d[i])) > rA + rB) return false;
+        float rB = obb_half_extents_2d.x * glm::abs(dotproduct2(aabb_axes_2d[i], obb_axes_2d[0])) +
+                   obb_half_extents_2d.y * glm::abs(dotproduct2(aabb_axes_2d[i], obb_axes_2d[1]));
+        if (glm::abs(dotproduct2(to_center, aabb_axes_2d[i])) > rA + rB) return false;
     }
     // Test OBB's axes
     for (int i = 0; i < 2; ++i) {
-        float rA = aabb_half_extents_2d.x * glm::abs(glm::dot(obb_axes_2d[i], aabb_axes_2d[0])) +
-                   aabb_half_extents_2d.y * glm::abs(glm::dot(obb_axes_2d[i], aabb_axes_2d[1]));
+        float rA = aabb_half_extents_2d.x * glm::abs(dotproduct2(obb_axes_2d[i], aabb_axes_2d[0])) +
+                   aabb_half_extents_2d.y * glm::abs(dotproduct2(obb_axes_2d[i], aabb_axes_2d[1]));
         float rB = obb_half_extents_2d[i];
-        if (glm::abs(glm::dot(to_center, obb_axes_2d[i])) > rA + rB) return false;
+        if (glm::abs(dotproduct2(to_center, obb_axes_2d[i])) > rA + rB) return false;
     }
     return true; // No separating axis found, they overlap
 }
@@ -507,16 +507,16 @@ CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerM
 
     // OBB orientation axes (normalized direction vectors)
     glm::vec3 objectAxes[3] = {
-        glm::normalize(glm::vec3(objectTransform[0])),
-        glm::normalize(glm::vec3(objectTransform[1])),
-        glm::normalize(glm::vec3(objectTransform[2]))
+        glm::vec3(objectTransform[0])/norm(glm::vec4(glm::vec3(objectTransform[0]), 0.0f)),
+        glm::vec3(objectTransform[1])/norm(glm::vec4(glm::vec3(objectTransform[1]), 0.0f)),
+        glm::vec3(objectTransform[2])/norm(glm::vec4(glm::vec3(objectTransform[2]), 0.0f))
     };
 
     // OBB scaled half-extents (size along each of its axes)
     glm::vec3 objectScaledHalfExtents = {
-        glm::length(glm::vec3(objectTransform[0])) * objectHalfExtentsLocal.x,
-        glm::length(glm::vec3(objectTransform[1])) * objectHalfExtentsLocal.y,
-        glm::length(glm::vec3(objectTransform[2])) * objectHalfExtentsLocal.z
+        norm(glm::vec4(glm::vec3(objectTransform[0]), 0.0f)) * objectHalfExtentsLocal.x,
+        norm(glm::vec4(glm::vec3(objectTransform[1]), 0.0f)) * objectHalfExtentsLocal.y,
+        norm(glm::vec4(glm::vec3(objectTransform[2]), 0.0f)) * objectHalfExtentsLocal.z
     };
 
     // AABB orientation axes (world axes)
@@ -538,35 +538,35 @@ CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerM
     axesToTest[3] = objectAxes[0];
     axesToTest[4] = objectAxes[1];
     axesToTest[5] = objectAxes[2];
-    axesToTest[6] = glm::cross(playerAxes[0], objectAxes[0]);
-    axesToTest[7] = glm::cross(playerAxes[0], objectAxes[1]);
-    axesToTest[8] = glm::cross(playerAxes[0], objectAxes[2]);
-    axesToTest[9] = glm::cross(playerAxes[1], objectAxes[0]);
-    axesToTest[10] = glm::cross(playerAxes[1], objectAxes[1]);
-    axesToTest[11] = glm::cross(playerAxes[1], objectAxes[2]);
-    axesToTest[12] = glm::cross(playerAxes[2], objectAxes[0]);
-    axesToTest[13] = glm::cross(playerAxes[2], objectAxes[1]);
-    axesToTest[14] = glm::cross(playerAxes[2], objectAxes[2]);
+    axesToTest[6] = crossproduct3(playerAxes[0], objectAxes[0]);
+    axesToTest[7] = crossproduct3(playerAxes[0], objectAxes[1]);
+    axesToTest[8] = crossproduct3(playerAxes[0], objectAxes[2]);
+    axesToTest[9] = crossproduct3(playerAxes[1], objectAxes[0]);
+    axesToTest[10] = crossproduct3(playerAxes[1], objectAxes[1]);
+    axesToTest[11] = crossproduct3(playerAxes[1], objectAxes[2]);
+    axesToTest[12] = crossproduct3(playerAxes[2], objectAxes[0]);
+    axesToTest[13] = crossproduct3(playerAxes[2], objectAxes[1]);
+    axesToTest[14] = crossproduct3(playerAxes[2], objectAxes[2]);
 
     for (int i = 0; i < 15; i++) {
         glm::vec3 axis = axesToTest[i];
         
         // SAFETY CHECK: Skip near-zero axes from parallel cross products
-        if (glm::dot(axis, axis) < 1e-8f) {
+        if (dotproduct3(axis, axis) < 1e-8f) {
             continue;
         }
-        axis = glm::normalize(axis);
+        axis = axis/norm(glm::vec4(axis, 0.0f));
 
         // Project both boxes onto the current axis
-        float rA = glm::abs(playerHalfExtents.x * glm::dot(axis, playerAxes[0])) +
-                   glm::abs(playerHalfExtents.y * glm::dot(axis, playerAxes[1])) +
-                   glm::abs(playerHalfExtents.z * glm::dot(axis, playerAxes[2]));
+        float rA = glm::abs(playerHalfExtents.x * dotproduct3(axis, playerAxes[0])) +
+                   glm::abs(playerHalfExtents.y * dotproduct3(axis, playerAxes[1])) +
+                   glm::abs(playerHalfExtents.z * dotproduct3(axis, playerAxes[2]));
 
-        float rB = glm::abs(objectScaledHalfExtents.x * glm::dot(axis, objectAxes[0])) +
-                   glm::abs(objectScaledHalfExtents.y * glm::dot(axis, objectAxes[1])) +
-                   glm::abs(objectScaledHalfExtents.z * glm::dot(axis, objectAxes[2]));
+        float rB = glm::abs(objectScaledHalfExtents.x * dotproduct3(axis, objectAxes[0])) +
+                   glm::abs(objectScaledHalfExtents.y * dotproduct3(axis, objectAxes[1])) +
+                   glm::abs(objectScaledHalfExtents.z * dotproduct3(axis, objectAxes[2]));
 
-        float distance = glm::abs(glm::dot(objectCenter - playerCenter, axis));
+        float distance = glm::abs(dotproduct3(objectCenter - playerCenter, axis));
 
         if (distance > rA + rB) {
             // A separating axis was found, there is no collision
@@ -586,7 +586,7 @@ CollisionInfo FindCollision(const glm::vec3& playerMin, const glm::vec3& playerM
     result.hasCollided = true;
     
     // Ensure the MTV always pushes the player away from the object
-    if (glm::dot(objectCenter - playerCenter, smallestAxis) > 0) {
+    if (dotproduct3(objectCenter - playerCenter, smallestAxis) > 0) {
         smallestAxis = -smallestAxis;
     }
     
@@ -2260,7 +2260,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) move_vector -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) move_vector += right;
     if (norm(glm::vec4(move_vector, 0.0)) > 0.0f) {
-        move_vector = glm::normalize(move_vector) * speed;
+        move_vector = (move_vector/norm(glm::vec4(move_vector, 0.0f))) * speed;
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && g_IsCharacterGrounded) {
         g_CharacterVerticalVelocity = JUMP_FORCE;
@@ -2284,7 +2284,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
         for (size_t i = 0; i < g_BarricadePositions.size(); ++i) {
             glm::mat4 barricade_model_matrix = Matrix_Translate(g_BarricadePositions[i].x, g_BarricadePositions[i].y, g_BarricadePositions[i].z) * Matrix_Rotate_Y(g_BarricadeRotation[i]) * Matrix_Scale(1.2f, 1.2f, 1.2f);
             CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, barricade_model_matrix, barricade_bbox_min, barricade_bbox_max);
-            if (info.hasCollided && glm::length(info.mtv) < 1.0f) { // SAFETY CHECK: Ignore huge MTVs
+            if (info.hasCollided && norm(glm::vec4(info.mtv, 0.0f)) < 1.0f) { // SAFETY CHECK: Ignore huge MTVs
                 character_position += info.mtv;
                 if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
             }
@@ -2293,7 +2293,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
         for (auto& enemy : g_Enemies) {
             if (enemy.health <= 0) continue;
             CollisionInfo info = FindCollision(player_bbox_min, player_bbox_max, enemy.model_matrix, g_EnemyPhysicsBboxMin, g_EnemyPhysicsBboxMax);
-            if (info.hasCollided && glm::length(info.mtv) < 1.0f) { // SAFETY CHECK: Ignore huge MTVs
+            if (info.hasCollided && norm(glm::vec4(info.mtv, 0.0f)) < 1.0f) { // SAFETY CHECK: Ignore huge MTVs
                 character_position += info.mtv * 0.5f;
                 enemy.position     -= info.mtv * 0.5f;
                 if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
@@ -2308,7 +2308,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
             glm::vec3 bottom_min_local = Physics::CAR_BOTTOM_HITBOX.offset - Physics::CAR_BOTTOM_HITBOX.size * 0.5f;
             glm::vec3 bottom_max_local = Physics::CAR_BOTTOM_HITBOX.offset + Physics::CAR_BOTTOM_HITBOX.size * 0.5f;
             CollisionInfo bottom_info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, bottom_min_local, bottom_max_local);
-            if (bottom_info.hasCollided && glm::length(bottom_info.mtv) < 1.0f)
+            if (bottom_info.hasCollided && norm(glm::vec4(bottom_info.mtv, 0.0f)) < 1.0f)
             {
                 character_position += bottom_info.mtv;
                 if (bottom_info.mtv.y > 0.001f) {
@@ -2320,7 +2320,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
             glm::vec3 top_max_local = Physics::CAR_TOP_HITBOX.offset + Physics::CAR_TOP_HITBOX.size * 0.5f;
             CollisionInfo top_info = FindCollision(player_bbox_min, player_bbox_max, car_model_matrix, top_min_local, top_max_local);
 
-            if (top_info.hasCollided && glm::length(top_info.mtv) < 1.0f)
+            if (top_info.hasCollided && norm(glm::vec4(top_info.mtv, 0.0f)) < 1.0f)
             {
                 character_position += top_info.mtv;
                 if (top_info.mtv.y > 0.001f) {

@@ -200,6 +200,22 @@ inline glm::vec4 crossproduct(glm::vec4 u, glm::vec4 v)
     );
 }
 
+inline glm::vec3 crossproduct3(glm::vec3 u, glm::vec3 v)
+{
+    float u1 = u.x;
+    float u2 = u.y;
+    float u3 = u.z;
+    float v1 = v.x;
+    float v2 = v.y;
+    float v3 = v.z;
+
+    return glm::vec3(
+        u2*v3 - u3*v2, // Primeiro coeficiente
+        u3*v1 - u1*v3, // Segundo coeficiente
+        u1*v2 - u2*v1 // Terceiro coeficiente
+    );
+}
+
 // Produto escalar entre dois vetores u e v definidos em um sistema de
 // coordenadas ortonormal.
 inline float dotproduct(glm::vec4 u, glm::vec4 v)
@@ -220,6 +236,28 @@ inline float dotproduct(glm::vec4 u, glm::vec4 v)
     }
 
     return u1*v1 + u2*v2 + u3*v3;
+}
+
+inline float dotproduct3(glm::vec3 u, glm::vec3 v)
+{
+    float u1 = u.x;
+    float u2 = u.y;
+    float u3 = u.z;
+    float v1 = v.x;
+    float v2 = v.y;
+    float v3 = v.z;
+
+    return u1*v1 + u2*v2 + u3*v3;
+}
+
+inline float dotproduct2(glm::vec2 u, glm::vec2 v)
+{
+    float u1 = u.x;
+    float u2 = u.y;
+    float v1 = v.x;
+    float v2 = v.y;
+
+    return u1*v1 + u2*v2;
 }
 
 // Matriz de mudança de coordenadas para o sistema de coordenadas da Câmera.
