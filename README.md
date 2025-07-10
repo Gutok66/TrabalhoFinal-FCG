@@ -14,11 +14,15 @@ Bruno Fialho Zawacki:
 
 # Utilização de Ferramentas de IA:
 
-Utilizamos IA para desenvolver nosso projeto, usando ferramentas como Copilot e Gemini, foi usado para ajudar na criação de novas features e fornecer uma base, e também para perguntas conceituais e debugging. As seguintes partes foram feitas usando IA: algumas funções de checar colisão com bounding boxes; Renderização de particulas e hitboxes; O cálculo da equação de Bezier; A adaptação de Phong para Gouraud no vertex. Como o projeto era muito grande a IA acabou não sendo tão eficaz para fazer código funcional, pois ficava criando variáveis que já existiam e usava funções do glm que foram proibidas pelo professor. Porém, ainda foi muito útil para ajudar a organizar o código e ajudar a estruturar várias funções úteis para nossa aplicação. Concluímos que foi mais fácil receber um código errado da IA e corrigi-lo do que simplesmente não utilizar essas ferramentas e faze-lo sozinho.
+Utilizamos IA para desenvolver nosso projeto, usando ferramentas como Copilot e Gemini, foi usado para ajudar na criação de novas features e fornecer uma base, e também para perguntas conceituais e debugging. As seguintes partes foram feitas usando IA: algumas funções de checar colisão com bounding boxes; Renderização de particulas e hitboxes; O cálculo da equação de Bezier; A adaptação de Phong para Gouraud no vertex. Como o projeto era muito grande a IA acabou não sendo tão eficaz para fazer código funcional, pois ficava criando variáveis que já existiam e usava funções do glm que foram proibidas pelo professor. Porém, ainda foi muito útil para ajudar a organizar o código e ajudar a estruturar várias funções úteis para nossa aplicação. Concluímos que foi mais fácil receber um código errado da IA e corrigi-lo do que simplesmente não utilizar essas ferramentas e fazê-lo sozinho.
 
 # Processo de Desenvolvimento e do uso em sua aplicação dos conceitos de Computação Gráfica:
 
-Utilizamos como base para o nosso projeto o código do laboratório 5 desenvolvido em aula, Primeiramente foi modificado a textura do plano do chão, que já estava implementado no laboratório 5, e então importamos o objeto do inimigo, que era composto por vários objetos com diferentes texturas. Inicialmente, tentamos fazer de modo automático o processo de importar as texturas dos mtl. Porém, acabou não dando certo, e então a câmera em terceira pessoa foi a primeira implementada e árvores com posições aleatorias (depois substituídas pelas barricadas) foram geradas, porém as árvores eram muito complexas, tivemos vários problemas para adicionar a textura nas suas folhas e estavam também diminuindo muito o fps, então decidimos mudar para um ambiente interno e usar outros objetos. Adicionamos as funções de movimentação do personagem e física para o pulo. Depois, implementamos a lógica para os projéteis e a câmera em primeira pessoa, adicionamos as paredes e teto e as novas texturas e consertamos a 3 pessoa. Além disso, adicionamos a opção do zoom que muda o sistema da câmera de terceira para primeira pessoa ao se aproximar do personagem. Criamos um sistema de munição e adicionamos um novo objeto, as barricadas de concreto, fizemos a colisão das paredes com o personagem principal. A movimentação de bezier aleatória dos inimigos foi adicionada, o gouraud shade e o sistema de vida e dano dos inimigos foi feita, recoil ao atirar foi adicionado, cor do texto da hud mudado para amarelo e as particulas de muzzle flash e sangue adicionada, colisao do tiro com as barricadas foi melhorada e adicionado o score de eliminações, colisao do personagem com as barricadas foi feita e melhorada, foi adicionado um objeto de um carro encontrado no site PolyHaven, feita a colisão do carro com o personagem e a colisao do personagem com os inimigos. Por fim, adicionamos o efeito de morte ao enconstar nos inimigos, o modo para desenhar as boundingboxes de todos os objetos e correção e limpeza do código final.
+Utilizamos como base para o nosso projeto o código do laboratório 5 desenvolvido em aula, para obter os nosso modelos e texturas utilizamos o site Poly Haven para obter as texturas dos planos do chão, paredes e teto, e também o modelo do carro, o personagem principal foi retirado do site sketchfab e as barricadas do blenderkit. Primeiramente foi modificado a textura do plano do chão, importando o png e usado como textura difusa no fragment shader, que já estava implementado no laboratório 5, e então importamos o objeto do inimigo, que era composto por vários objetos com diferentes texturas. Inicialmente, tentamos fazer de modo automático o processo de importar as texturas dos mtl, porém acabou não dando certo e decidimos voltar a fazer de modo manual. 
+
+Implementamos inicialmente a câmera em terceira pessoa look-at e árvores com posições aleatórias (depois substituídas pelas barricadas), porém as árvores eram muito complexas e estavam diminuindo muito o fps, também tivemos vários problemas para adicionar a textura nas suas folhas que tinham alpha, então decidimos mudar para um ambiente interno e usar outros objetos. O personagem principal encontrado no site não era um arquivo obj e estava em outra pose, então importamos para o Blender e modificamos a pose dele através das ferramentas de rig e esqueletos disponíveis, e então exportamos como obj e mtl. Adicionamos as funções de movimentação do personagem e física para o pulo, depois, implementamos a lógica para os projéteis e a câmera em primeira pessoa que é como uma câmera livre, adicionamos as paredes e teto e as novas texturas. Além disso, adicionamos a opção do zoom que muda o sistema da câmera de terceira para primeira pessoa ao se aproximar do personagem.
+
+Criamos um sistema de munição e adicionamos um novo objeto, as barricadas de concreto, fizemos a colisão das paredes com o personagem principal. A movimentação de bezier aleatória dos inimigos foi adicionada, o gouraud shade foi implementado calculando os valores da iluminação apenas nos vértices no vertex shader, e o sistema de vida e dano dos inimigos foi feita, recoil ao atirar foi adicionado, cor do texto da hud mudado para amarelo e as particulas de muzzle flash e sangue adicionada, colisão do tiro com as barricadas foi melhorada e adicionado o score de eliminações, colisao do personagem com as barricadas foi feita e melhorada, foi adicionado um objeto de um carro encontrado no site PolyHaven, feita a colisão do carro com o personagem e a colisao do personagem com os inimigos. Por fim, adicionamos o efeito de morte ao enconstar nos inimigos, o modo para desenhar as boundingboxes de todos os objetos e correção e limpeza do código final.
 
 ![Exemplo 1 da aplicação](data/textures/strikepoint01.jpeg)  
 ![Exemplo 2 da aplicação](data/textures/strikepoint02.jpeg)
@@ -38,10 +42,16 @@ Utilizamos como base para o nosso projeto o código do laboratório 5 desenvolvi
 
 # Compilação e execução:
 
-    Ter compilador de C++
-    Ter Cmake instalado
-    Instalar o VSCode
-    Instalar extensões de C++ e Cmake tools no vscode
-    Selecionar o Compilador para o Cmake
-    Clicar no botão de play pequeno na parte inferior
+1. **Requisitos**:
+   * Ter compilador de C++ instalado
+   * Ter CMake instalado
+   * Ter o Visual Studio Code instalado
+   * Instalar extensões de C++ e CMake tools no vscode 
+3. **Compilação**:  
+   * Clone o repositório: `git clone https://github.com/Gutok66/TrabalhoFinal-FCG`  
+   * Inicialize o VSCode na pasta do projeto 
+   * Selecione o Compilador para o CMake
+   * Dê build clicando no botão de launch na parte inferior da interface
+4. **Execução**:  
+   * Clicar no botão de launch na parte inferior ou execute o .exe na pasta bin/Debug
 
