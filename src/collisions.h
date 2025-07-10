@@ -1,5 +1,5 @@
-#ifndef COLLISION_H
-#define COLLISION_H
+#ifndef COLLISIONS_H
+#define COLLISIONS_H
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -76,4 +76,4 @@ namespace Physics {
                         float& hit_distance);
 }
 
-#endif // COLLISION_H
+#endif // COLLISIONS_H

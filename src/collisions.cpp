@@ -1,4 +1,4 @@
-#include "collision.h"
+#include "collisions.h"
 #include "matrices.h"
 
 #include <algorithm>
@@ -254,7 +254,7 @@ bool Physics::RayIntersectsGround(glm::vec3 ray_origin, glm::vec3 ray_direction,
     return false;
 }
 
-// Feito com ajuda de IA
+// FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
 bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
                                  glm::vec3 plane_point, glm::vec3 plane_normal,
                                  float& hit_distance) {
@@ -272,7 +272,7 @@ bool Physics::RayIntersectsPlane(glm::vec3 ray_origin, glm::vec3 ray_direction,
     return false;
 }
 
-// Feito com ajuda de IA
+// FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
 bool Physics::RayIntersectsOBB(glm::vec3 ray_origin, glm::vec3 ray_direction, 
                                 glm::vec3 box_center_offset, glm::vec3 box_size, glm::mat4 model_matrix, 
                                 float& hit_distance) {

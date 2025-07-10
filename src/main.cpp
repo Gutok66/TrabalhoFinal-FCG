@@ -49,7 +49,7 @@
 #include "matrices.h"
 
 // Header da colisão
-#include "collision.h"
+#include "collisions.h"
 #include "enemy.h"
 
 std::vector<Enemy> g_Enemies;
@@ -334,7 +334,7 @@ int window_height = 600.0f;
 #define COVERED_CAR 29
 
 
-// Função para calcular um ponto na curva de Bezier cúbica, feito com IA
+// Função para calcular um ponto na curva de Bezier cúbica, FONTE: Função feita com IA Gemini 2.5 Pro
 glm::vec3 CalculateBezierPoint(float t, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
     float u = 1.0f - t;
     float tt = t * t;
@@ -380,7 +380,7 @@ void GenerateBezierCurve(Enemy& enemy) {
     enemy.bezier_t = 0.0f; // Reseta o parâmetro da curva
 }
 
-// Feito com ajuda de IA
+// FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
 // Checa colisão entre dois AABBs
 bool CheckAABBvsOBBCollision(
     const glm::vec3& aabb_min, const glm::vec3& aabb_max,
@@ -449,7 +449,7 @@ bool CheckAABBvsOBBCollision(
     return true;
 }
 
-// feito com ajuda de IA
+// FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
 // calcula melhor colisão em cima dos objetos
 bool Check2DAABBvsOBBCollision(
     const glm::vec3& aabb_min, const glm::vec3& aabb_max,
@@ -487,7 +487,7 @@ bool Check2DAABBvsOBBCollision(
     }
     return true; // No separating axis found, they overlap
 }
-// feito com ajuda de IA
+// FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
 // A struct to hold information about a collision
 struct CollisionInfo
 {
@@ -758,7 +758,7 @@ int main(int argc, char* argv[])
     Physics::ENEMY_LEGS_HITBOX.offset = (legs_obj.bbox_min + legs_obj.bbox_max) * 0.5f;
     Physics::ENEMY_LEGS_HITBOX.size   = legs_obj.bbox_max - legs_obj.bbox_min;
 
-    // Feito com ajuda de IA
+    // FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
     // --- Calculate a single physics bounding box for the entire enemy ---
     g_EnemyPhysicsBboxMin = glm::min(
         Physics::ENEMY_LEGS_HITBOX.offset - Physics::ENEMY_LEGS_HITBOX.size * 0.5f,
@@ -922,7 +922,7 @@ int main(int argc, char* argv[])
 
         Physics::ApplyPlayerPhysics(character_position);
 
-        // if else do muzzle flash feito com IA
+        // FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
         if (g_MuzzleFlash.active) {
             g_MuzzleFlash.lifetime += deltaTime;
             // Calculate fade factor (1.0 to 0.0)
@@ -1183,7 +1183,7 @@ int main(int argc, char* argv[])
                 Kills++;
                 continue; // Skip dead enemies
             }
-            // Feito com ajuda de IA
+            // FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
             // --- 1. Enemy AI Movement ---
             // The AI calculates where the enemy wants to go
             enemy.bezier_t += deltaTime * enemy.speed;
@@ -1303,7 +1303,7 @@ int main(int argc, char* argv[])
             glDepthMask(GL_TRUE);
         }
 
-        // Loop for para renderizar particulas Feito com ajuda de IA
+        // Loop for para renderizar particulas, FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
         for (auto particle = g_BloodSplatters.begin(); particle != g_BloodSplatters.end(); ) {
             particle->lifetime += deltaTime;
             if (particle->lifetime >= particle->max_lifetime) {
@@ -2246,7 +2246,7 @@ void ErrorCallback(int error, const char* description)
 }
 
 
-// Corrigido com ajuda de IA
+// FONTE: Corrigido com ajuda de IA
 void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float deltaTime)
 {
     // Calculate desired movement from input and apply gravity 
@@ -2299,7 +2299,7 @@ void ProcessInput(GLFWwindow* window, glm::vec3& character_position, float delta
                 if (info.mtv.y > 0.001f) g_IsCharacterGrounded = true;
             }
         }
-        // Corrigido com IA
+        // FONTE: Corrigido com IA Gemini
         // Checa colisão com carro
         for (size_t i = 0; i < g_CarPositions.size(); ++i)
         {
@@ -2481,7 +2481,7 @@ void TextRendering_ShowReload(GLFWwindow* window)
         TextRendering_PrintString(window, "Press R to reload", 0.0f-12*charwidth, 0.0f+2*lineheight, 1.5f);
 }
 
-//Função feito com IA
+//FONTE: Função feita com ajuda da IA Gemini 2.5 Pro
 void DrawBoundingBox(const glm::vec3& bbox_min, const glm::vec3& bbox_max, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
 {
     // 8 vértices do cubo
