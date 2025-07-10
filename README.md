@@ -9,7 +9,7 @@ Augusto Kessler Pires:
     Encontrou todos os objetos e texturas, fez a pose do modelo principal no blender e importou todos os objetos e texturas na main, também fez toda a lógica de posição aleatória dos objetos e configurações, fez as alterações no shader_vertex e shader_fragment, exceto pelo projétil. Fez as hitboxes das barricadas e carro e função e botão de visualizar as mesmas, A lógica de eliminacões e munição e recarregar, a particula de sangue e também do muzzle flash.
 
 Bruno Fialho Zawacki:
-    Fez a hitbox do personagem principal e todas as lógicas dos tipos de colisões do jogo, criou o arquivo collision.cpp e collision.h, o objeto, shader fragment do projétil, sua estrutura e lógica, as funções físicas de gravidade do player, ajustou a render distance e nome da janela, fez lógica de morte do jogador, corrigiu bugs em geral (bug da particula de sangue e double damage), organizou e comentou grande parte do código.
+    Fez a hitbox do personagem principal e todas as lógicas dos tipos de colisões do jogo, criou o arquivo collision.cpp e collision.h, shader fragment do projétil, estrutura e lógica do projétil, as funções de físicas de gravidade do player, ajustou a render distance e nome da janela, fez lógica de morte do jogador, corrigiu bugs em geral (por exemplo: bug da partúcula de sangue e double damage), organizou e comentou grande parte do código.
 
 
 # Utilização de Ferramentas de IA:
